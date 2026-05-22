@@ -1,0 +1,2463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HistoQuest 組織學測驗系統</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --accent: #2563EB;
+      --accent-light: #EFF6FF;
+      --accent-dark: #1D4ED8;
+      --success: #059669;
+      --success-light: #ECFDF5;
+      --danger: #DC2626;
+      --danger-light: #FEF2F2;
+      --amber: #D97706;
+      --amber-light: #FFFBEB;
+      --surface: #FFFFFF;
+      --bg: #F8F9FB;
+      --border: #E5E7EB;
+      --text: #111827;
+      --muted: #6B7280;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      font-family: 'DM Sans', system-ui, sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* 登入頁專用背景：漸層 + 醫學細胞紋路（預設）。 */
+    /* 想改成自己的圖：放一張 login-bg.jpg 在同層資料夾即可自動覆蓋預設 */
+    #login-section {
+      background:
+        linear-gradient(135deg, rgba(37,99,235,0.85) 0%, rgba(124,58,237,0.85) 100%),
+        url("login-bg.jpg") center/cover no-repeat,
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600' viewBox='0 0 600 600'><defs><radialGradient id='c' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%23ffffff' stop-opacity='0.18'/><stop offset='70%25' stop-color='%23ffffff' stop-opacity='0.05'/><stop offset='100%25' stop-color='%23ffffff' stop-opacity='0'/></radialGradient></defs><circle cx='100' cy='120' r='70' fill='url(%23c)'/><circle cx='480' cy='80' r='55' fill='url(%23c)'/><circle cx='220' cy='340' r='90' fill='url(%23c)'/><circle cx='510' cy='430' r='65' fill='url(%23c)'/><circle cx='80' cy='500' r='55' fill='url(%23c)'/><circle cx='370' cy='540' r='45' fill='url(%23c)'/><circle cx='320' cy='200' r='35' fill='url(%23c)'/></svg>") center/cover no-repeat,
+        linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
+      background-blend-mode: normal, normal, soft-light, normal;
+    }
+    #login-section .card {
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+      backdrop-filter: blur(8px);
+      background: rgba(255,255,255,0.97);
+    }
+    .hidden { display: none !important; }
+
+    /* ── Page shell ── */
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 2rem;
+      width: 100%;
+    }
+    .card-sm { max-width: 420px; }
+    .card-md { max-width: 640px; }
+    .card-lg { max-width: 860px; }
+
+    /* ── Logo ── */
+    .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 18px; font-weight: 600;
+    }
+    .logo-text { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+    .logo-sub { font-size: 12px; color: var(--muted); margin-top: 1px; font-family: 'DM Mono', monospace; }
+
+    /* ── Inputs ── */
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 13px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+    .field input, .field select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
+    .field select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .hint { font-size: 12px; color: var(--danger); margin-top: 6px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 15px; font-weight: 500; font-family: inherit;
+      border: none; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--accent); color: #fff; width: 100%; }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { background: var(--bg); }
+    .btn-success { background: var(--success); color: #fff; width: 100%; }
+    .btn-success:hover { background: #047857; }
+    .btn-danger-outline { background: transparent; border: 1.5px solid #FCA5A5; color: var(--danger); }
+
+    /* ── Dashboard cards ── */
+    .stat-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+    .stat-box {
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+    .stat-box .val { font-size: 26px; font-weight: 600; line-height: 1; margin-bottom: 2px; }
+    .stat-box .lbl { font-size: 12px; color: var(--muted); }
+
+    /* ── Chapter selector pills ── */
+    .section-label { font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+
+    /* ── Quiz ── */
+    .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .progress-bar-track { width: 100%; height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 1.25rem; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.4s ease; }
+    .img-box {
+      width: 100%; height: 260px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1.25rem;
+    }
+    @media (min-height: 700px) { .img-box { height: 340px; } }
+    .img-box img { max-width: 100%; max-height: 100%; object-fit: contain; -webkit-user-select: none; user-select: none; -webkit-user-drag: none; user-drag: none; pointer-events: none; }
+    /* Stage 2 期間禁止文字選取 */
+    body.stage2-active { -webkit-user-select: none; user-select: none; }
+    body.stage2-active #answer-input { -webkit-user-select: text; user-select: text; }
+    .timer-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 15px; font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      transition: all 0.3s;
+    }
+    .timer-badge.critical { background: var(--danger-light); border-color: #FCA5A5; color: var(--danger); animation: pulse 0.5s infinite; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 480px) { .options-grid { grid-template-columns: 1fr; } }
+    .opt-btn {
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-size: 14px; font-weight: 500; font-family: inherit;
+      text-align: left; cursor: pointer;
+      transition: all 0.15s;
+      color: var(--text);
+    }
+    .opt-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+    .opt-btn.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+    .opt-btn.correct { border-color: var(--success); background: var(--success-light); color: var(--success); }
+    .opt-btn.wrong { border-color: var(--danger); background: var(--danger-light); color: var(--danger); }
+    .feedback-strip {
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 14px; font-weight: 500;
+      margin-bottom: 1rem;
+    }
+    .feedback-strip.correct { background: var(--success-light); color: var(--success); }
+    .feedback-strip.wrong { background: var(--danger-light); color: var(--danger); }
+    .feedback-strip.timeout { background: var(--amber-light); color: var(--amber); }
+    .explanation-box {
+      background: #EFF6FF;
+      border: 1px solid #BFDBFE;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 13px; color: #1E40AF; line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+    .answer-input {
+      width: 100%;
+      padding: 13px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 16px; font-family: 'DM Mono', monospace;
+      outline: none; text-align: center;
+      margin-bottom: 1rem;
+      transition: border-color 0.15s;
+    }
+    .answer-input:focus { border-color: var(--accent); }
+
+    /* ── Result ── */
+    .score-ring {
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      border: 6px solid var(--accent);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      margin: 0 auto 1.25rem;
+    }
+    .score-ring .big { font-size: 32px; font-weight: 600; color: var(--accent); }
+    .score-ring .small { font-size: 11px; color: var(--muted); }
+    .wrong-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .wrong-thumb {
+      width: 80px; height: 60px; flex-shrink: 0;
+      background: var(--bg); border-radius: 6px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border);
+    }
+    .wrong-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+    /* ── Teacher Dashboard ── */
+    #teacher-section { min-height: 100vh; background: var(--bg); }
+    .teacher-topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 56px; position: sticky; top: 0; z-index: 10;
+    }
+    .teacher-body { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+    .dash-stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 1.5rem; }
+    @media (max-width: 600px) { .dash-stat-grid { grid-template-columns: repeat(2,1fr); } }
+    .dash-stat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px;
+    }
+    .dash-stat .dval { font-size: 28px; font-weight: 600; line-height: 1; margin-bottom: 4px; }
+    .dash-stat .dlbl { font-size: 12px; color: var(--muted); }
+    .teacher-tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: var(--bg); padding: 4px; border-radius: 10px; width: fit-content; }
+    .teacher-tab { padding: 7px 16px; border-radius: 7px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; background: transparent; color: var(--muted); font-family: inherit; transition: all 0.15s; }
+    .teacher-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .teacher-panel { display: none; }
+    .teacher-panel.active { display: block; }
+    .chapter-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 12px; }
+    .chapter-block h4 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+    .stage-bar-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .stage-bar-track { flex: 1; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+    .stage-bar-fill { height: 100%; border-radius: 3px; }
+    .student-rank-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .student-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+    .score-pill { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+    .chart-wrap { position: relative; width: 100%; }
+    .difficulty-insight { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius-sm); padding: 14px 16px; margin-top: 1rem; }
+    .difficulty-insight p { font-size: 13px; color: #92400E; line-height: 1.7; }
+
+    /* ── Animations ── */
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .animate-in { animation: fadeIn 0.3s ease both; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     LOGIN
+═══════════════════════════════════════ -->
+<div id="login-section" class="page">
+  <div class="card card-sm animate-in">
+    <div class="logo-mark">
+      <div class="logo-icon">醫學</div>
+      <div>
+        <div class="logo-text">HistoQuest</div>
+        <div class="logo-sub">組織學測驗系統 · 解剖學科</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>學號 / 姓名</label>
+      <input type="text" id="student-id-input" placeholder="請輸入您的學號或姓名" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>密碼</label>
+      <input type="password" id="password-input" placeholder="請輸入密碼" autocomplete="current-password">
+      <div class="hint">※ 首次輸入的密碼將作為日後登入依據</div>
+    </div>
+    <button class="btn btn-primary" onclick="performLogin()">登入系統</button>
+    <button class="btn btn-ghost" onclick="openFeedback()" style="width:100%;margin-top:10px;font-size:13px;">💬 給開發者一些意見</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     FEEDBACK MODAL
+═══════════════════════════════════════ -->
+<div id="feedback-modal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:1rem;">
+  <div class="card card-sm animate-in" style="max-width:440px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div style="font-size:18px;font-weight:600;">💬 回饋意見</div>
+      <button onclick="closeFeedback()" style="background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;line-height:1;">×</button>
+    </div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:1rem;">
+      你的建議是讓 HistoQuest 變更好的關鍵！可填寫遇到的問題、建議的功能或對題目的意見。
+    </p>
+    <div class="field">
+      <label>暱稱（選填）</label>
+      <input type="text" id="feedback-name" placeholder="不填則匿名">
+    </div>
+    <div class="field">
+      <label>意見類型</label>
+      <select id="feedback-type">
+        <option value="建議">💡 功能建議</option>
+        <option value="錯誤">🐛 系統錯誤</option>
+        <option value="題目">📝 題目意見</option>
+        <option value="其他">💭 其他</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>意見內容 *</label>
+      <textarea id="feedback-content" placeholder="請描述您的意見或建議…" rows="4" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;resize:vertical;outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="submitFeedback()" id="feedback-submit-btn">送出意見</button>
+    <div id="feedback-status" style="display:none;margin-top:10px;padding:10px;border-radius:8px;font-size:13px;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     STUDENT DASHBOARD
+═══════════════════════════════════════ -->
+<div id="dashboard-section" class="page hidden">
+  <div class="card card-md animate-in">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
+      <div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:2px;">歡迎回來，</div>
+        <div id="display-student-id" style="font-size:22px;font-weight:600;"></div>
+      </div>
+      <button class="btn btn-ghost" onclick="performLogout()" style="padding:8px 14px;font-size:13px;">登出</button>
+    </div>
+
+    <!-- Personal stats row -->
+    <div class="stat-row" id="personal-stats" style="display:none;">
+      <div class="stat-box">
+        <div class="val" id="stat-attempts" style="color:var(--accent);">—</div>
+        <div class="lbl">總測驗次數</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="stat-best" style="color:var(--success);">—</div>
+        <div class="lbl">最高分 (Stage 2)</div>
+      </div>
+    </div>
+
+    <button id="my-summary-btn" class="btn btn-ghost" onclick="openMySummary()" style="display:none;width:100%;margin-bottom:1rem;padding:11px;font-size:13px;border:1.5px solid var(--accent);color:var(--accent);background:var(--accent-light);">
+      📊 查看我的作答總評語
+    </button>
+
+    <div class="field">
+      <div class="section-label">📌 選擇單元章節</div>
+      <select id="chapter-select"></select>
+    </div>
+
+    <div class="field">
+      <div class="section-label">🎯 選擇學習階段</div>
+      <select id="stage-select">
+        <option value="1">Stage 1 ── 記憶模式（選擇題測驗）</option>
+        <option value="2">Stage 2 ── 測驗模式（35s 跑考練習）</option>
+      </select>
+    </div>
+
+    <button id="start-btn" class="btn btn-success" onclick="startQuiz()">開始載入</button>
+    <div id="start-error" style="display:none;margin-top:10px;padding:10px 12px;background:var(--danger-light);color:var(--danger);font-size:12px;border-radius:8px;text-align:center;line-height:1.5;"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MY SUMMARY (個人作答總評語)
+═══════════════════════════════════════ -->
+<div id="my-summary-section" class="hidden" style="min-height:100vh;background:var(--bg);">
+  <div class="teacher-topbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="logo-icon" style="width:32px;height:32px;font-size:14px;">H</div>
+      <div>
+        <div style="font-size:14px;font-weight:600;">我的作答總評語</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;" id="my-summary-id">—</div>
+      </div>
+    </div>
+    <button class="btn btn-ghost" onclick="closeMySummary()" style="padding:7px 14px;font-size:13px;">← 返回</button>
+  </div>
+
+  <div class="teacher-body">
+    <!-- 篩選器 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:1.25rem;">
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+        <div style="flex:1;min-width:160px;">
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px;">章節</label>
+          <select id="summary-filter-chapter" onchange="renderMySummary()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);">
+            <option value="">全部章節</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px;">階段</label>
+          <select id="summary-filter-stage" onchange="renderMySummary()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);">
+            <option value="">全部階段</option>
+            <option value="1">Stage 1 (選擇題)</option>
+            <option value="2">Stage 2 (跑考)</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:140px;">
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px;">作答類型</label>
+          <select id="summary-filter-type" onchange="renderMySummary()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);">
+            <option value="all">全部（含錯題練習）</option>
+            <option value="main">僅主測驗</option>
+            <option value="practice">僅錯題練習</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 載入中 -->
+    <div id="my-summary-loading" style="text-align:center;padding:3rem 1rem;color:var(--muted);font-size:13px;">
+      載入中…
+    </div>
+
+    <!-- 無資料 -->
+    <div id="my-summary-empty" class="hidden" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3rem 1rem;text-align:center;color:var(--muted);font-size:13px;">
+      📭 目前條件下尚無作答紀錄
+    </div>
+
+    <!-- 主要內容 -->
+    <div id="my-summary-content" class="hidden">
+
+      <!-- 總體統計 -->
+      <div class="dash-stat-grid">
+        <div class="dash-stat">
+          <div class="dval" id="ms-total-attempts" style="color:var(--accent);">—</div>
+          <div class="dlbl">總作答次數</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dval" id="ms-avg-score" style="color:var(--success);">—</div>
+          <div class="dlbl">平均分</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dval" id="ms-best-score" style="color:var(--amber);">—</div>
+          <div class="dlbl">最高分</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dval" id="ms-low-score" style="color:var(--danger);">—</div>
+          <div class="dlbl">最低分</div>
+        </div>
+      </div>
+
+      <!-- 智能學習建議（核心：總評語） -->
+      <div id="ms-insight-box" style="background:linear-gradient(135deg,#EFF6FF 0%,#F0F9FF 100%);border:1px solid #BFDBFE;border-radius:var(--radius-sm);padding:18px 20px;margin-bottom:1.25rem;">
+        <div style="font-size:13px;font-weight:600;color:#1E40AF;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+          🎯 學習總評語
+        </div>
+        <div id="ms-insight-content" style="font-size:13px;color:#1E3A8A;line-height:1.8;"></div>
+      </div>
+
+      <!-- 章節熱力圖 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:1.25rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">📊 各章節精熟度</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">依平均分上色：🟢 80+　🟡 60-79　🟠 40-59　🔴 &lt;40</div>
+        <div id="ms-heatmap" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
+      </div>
+
+      <!-- 趨勢圖 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:1.25rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">📈 作答趨勢</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">最近 20 次作答的得分變化</div>
+        <div class="chart-wrap" style="height:240px;">
+          <canvas id="ms-trend-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- 錯題練習成效 -->
+      <div id="ms-practice-card" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;margin-bottom:1.25rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px;">🎯 錯題練習成效</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">主測驗 vs 錯題練習的平均分比較</div>
+        <div id="ms-practice-content"></div>
+      </div>
+
+      <!-- 薄弱章節 Top 3 -->
+      <div id="ms-weak-card" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 18px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:14px;">🔍 建議加強的章節</div>
+        <div id="ms-weak-content"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     QUIZ
+═══════════════════════════════════════ -->
+<div id="quiz-section" class="page hidden">
+  <div class="card card-lg animate-in" style="padding:1.5rem;">
+    <div class="quiz-header">
+      <span id="progress-text" style="font-size:13px;font-weight:500;color:var(--muted);font-family:'DM Mono',monospace;"></span>
+      <span id="timer-display" class="timer-badge hidden">35s</span>
+    </div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+    </div>
+
+    <div id="cheat-warning" class="hidden" style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:12px;color:#991B1B;line-height:1.6;">
+      ⚠️ <strong>誠信提醒：</strong>本階段禁止 <strong>切換分頁、縮小視窗、複製、貼上、右鍵、開發者工具</strong>，違規該題自動 <strong>0 分</strong>並記錄違規次數。
+    </div>
+
+    <div id="question-text" class="hidden" style="font-size:15px;font-weight:500;color:var(--text);background:#F0F9FF;border-left:3px solid var(--accent);padding:10px 14px;border-radius:8px;margin-bottom:1rem;line-height:1.6;"></div>
+
+    <div class="img-box">
+      <img id="quiz-image" src="" alt="組織圖" referrerpolicy="no-referrer"
+           onerror="this.style.opacity=0.3;this.alt='圖片載入失敗';">
+    </div>
+
+    <div id="answer-area">
+      <input type="text" id="answer-input" class="answer-input hidden"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+             data-form-type="other" data-lpignore="true" data-1p-ignore="true"
+             placeholder="請輸入組織 / 細胞名稱…">
+      <div id="options-container" class="options-grid hidden"></div>
+    </div>
+
+    <div id="feedback-msg" class="feedback-strip hidden"></div>
+    <div id="explanation-box" class="explanation-box hidden">
+      <p id="explanation-text"></p>
+    </div>
+
+    <button id="action-btn" class="btn btn-primary" onclick="handleAction()">下一步</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     RESULT
+═══════════════════════════════════════ -->
+<div id="result-section" class="page hidden">
+  <div class="card card-md animate-in" style="text-align:center;">
+    <div style="font-size:18px;font-weight:600;margin-bottom:1rem;">測驗結束</div>
+    <div class="score-ring" id="score-ring">
+      <div class="big" id="final-score-num">0</div>
+      <div class="small">分</div>
+    </div>
+    <p id="summary-comment" class="hidden" style="font-size:15px;font-weight:500;color:var(--amber);margin-bottom:1rem;"></p>
+    <div id="violation-notice" class="hidden" style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:13px;color:#991B1B;"></div>
+
+    <div id="wrong-answers-container" class="hidden" style="text-align:left;max-height:420px;overflow-y:auto;margin-bottom:1rem;">
+      <div style="font-size:14px;font-weight:600;color:var(--danger);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">錯題與解析回顧</div>
+      <div id="wrong-answers-list"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="backToDashboard()">回主選單</button>
+      <button id="practice-wrong-btn" class="btn btn-primary hidden" style="flex:1;" onclick="practiceWrongAnswers()">練習錯題</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TEACHER DASHBOARD
+═══════════════════════════════════════ -->
+<div id="teacher-section" class="hidden">
+  <div class="teacher-topbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="logo-icon" style="width:32px;height:32px;font-size:14px;">H</div>
+      <span style="font-size:15px;font-weight:600;">教師分析後台</span>
+      <span style="font-size:12px;color:var(--muted);margin-left:4px;">· <span id="teacher-id-display"></span></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-ghost" style="padding:6px 12px;font-size:13px;" onclick="refreshDashboard()">重新整理</button>
+      <button class="btn btn-ghost" style="padding:6px 12px;font-size:13px;" onclick="teacherLogout()">登出</button>
+    </div>
+  </div>
+
+  <div class="teacher-body">
+    <!-- Stats -->
+    <div class="dash-stat-grid">
+      <div class="dash-stat">
+        <div class="dval" id="t-students" style="color:var(--accent);">—</div>
+        <div class="dlbl">作答學生數</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dval" id="t-attempts" style="color:#7C3AED;">—</div>
+        <div class="dlbl">測驗總次數</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dval" id="t-avg" style="color:var(--success);">—</div>
+        <div class="dlbl">整體平均分</div>
+      </div>
+      <div class="dash-stat">
+        <div class="dval" id="t-chapters" style="color:var(--amber);">—</div>
+        <div class="dlbl">已作答章節</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="teacher-tabs">
+      <button class="teacher-tab active" onclick="switchTeacherTab('t-overview')">班級總覽</button>
+      <button class="teacher-tab" onclick="switchTeacherTab('t-difficulty')">難度分析</button>
+      <button class="teacher-tab" onclick="switchTeacherTab('t-students')">學生排行</button>
+      <button class="teacher-tab" onclick="switchTeacherTab('t-wrongs')">錯題分布</button>
+      <button class="teacher-tab" onclick="switchTeacherTab('t-heatmap')">學習熱力</button>
+      <button class="teacher-tab" onclick="switchTeacherTab('t-individual')">個別學生</button>
+      <button class="teacher-tab" onclick="switchTeacherTab('t-chapters')">章節管理</button>
+    </div>
+
+    <!-- Panel: Overview -->
+    <div id="t-overview" class="teacher-panel active">
+      <div id="chapter-blocks"></div>
+      <div class="chart-wrap" style="margin-top:1.5rem;">
+        <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:10px;">Stage 1 vs Stage 2 平均分（各章節）</div>
+        <div style="position:relative;height:220px;">
+          <canvas id="overviewChart" role="img" aria-label="各章節 Stage 1 和 Stage 2 平均分比較圖"></canvas>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--muted);">
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#2563EB;display:inline-block;"></span>Stage 1</span>
+          <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#059669;display:inline-block;"></span>Stage 2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel: Difficulty -->
+    <div id="t-difficulty" class="teacher-panel">
+      <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:10px;">分數分佈（所有測驗）</div>
+      <div style="position:relative;height:200px;">
+        <canvas id="distChart" role="img" aria-label="分數分佈直方圖"></canvas>
+      </div>
+      <div class="difficulty-insight" id="difficulty-insight" style="margin-top:1rem;">
+        <p id="insight-text">載入中…</p>
+      </div>
+    </div>
+
+    <!-- Panel: Students -->
+    <div id="t-students" class="teacher-panel">
+      <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:12px;">依 Stage 2 最高分排行（含連續達標天數）</div>
+      <div id="student-rank-list"></div>
+    </div>
+
+    <!-- Panel: Wrong-question distribution -->
+    <div id="t-wrongs" class="teacher-panel">
+      <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:12px;">最常被答錯的題目（Top 10）</div>
+      <div id="wrong-questions-list"></div>
+      <div id="wrongs-empty" style="display:none;text-align:center;padding:2rem;color:var(--muted);font-size:13px;">
+        尚無錯題資料。學生使用新版作答後此處會顯示分布。
+      </div>
+    </div>
+
+    <!-- Panel: Learning heatmap -->
+    <div id="t-heatmap" class="teacher-panel">
+      <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:12px;">學生作答時段分佈（24 小時）</div>
+      <div style="position:relative;height:220px;margin-bottom:1.5rem;">
+        <canvas id="hourChart" role="img" aria-label="學生作答時段分佈圖"></canvas>
+      </div>
+      <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:12px;">每日作答次數（近 30 日）</div>
+      <div style="position:relative;height:200px;">
+        <canvas id="dayChart" role="img" aria-label="近 30 日每日作答次數"></canvas>
+      </div>
+    </div>
+
+    <!-- Panel: Individual student -->
+    <div id="t-individual" class="teacher-panel">
+      <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:8px;">選擇學生查看個人錯題清單</div>
+      <select id="individual-student-select" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:14px;outline:none;margin-bottom:1.25rem;background:var(--surface);" onchange="renderIndividual()"></select>
+      <div id="individual-content"></div>
+    </div>
+
+    <!-- Panel: Chapter management -->
+    <div id="t-chapters" class="teacher-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+        <div style="font-size:13px;font-weight:500;color:var(--muted);">章節開放管理</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="bulkChapterAction('open')">全部開放</button>
+          <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="bulkChapterAction('locked')">全部鎖定</button>
+        </div>
+      </div>
+      <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 14px;margin-bottom:1rem;">
+        <p style="font-size:12px;color:#92400E;line-height:1.6;">
+          💡 三種狀態：<strong>開放</strong>（學生可作答）、<strong>鎖定</strong>（永久禁用）、<strong>排程</strong>（指定日期 00:00 自動開放）。設定即時生效，學生重新登入後可看到變化。
+        </p>
+      </div>
+      <div id="chapter-mgmt-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCRIPT
+═══════════════════════════════════════ -->
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCjdIRAketLq-EO3p18CbMUvmbUUH63mU1WInykv7FTiRk9GAmtzXd-2fGqJrb-18W/exec";
+
+// 教師帳號清單（id 統一小寫比對）
+const TEACHER_ACCOUNTS = ["chh", "chhwang", "admin", "teacher"];
+
+// 章節開放狀態（從後端載入）
+// 格式：{ "Chapter Name": { unlockDate: "YYYY-MM-DD", status: "open"/"locked"/"scheduled" } }
+let chapterSettings = {};
+
+async function loadChapterSettings() {
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=getChapterSettings`);
+    const json = await res.json();
+    if (json.status !== "success") return;
+    chapterSettings = {};
+    // 跳過 header row
+    json.data.slice(1).forEach(row => {
+      const [chapter, unlockDate, status] = row;
+      if (chapter) {
+        chapterSettings[chapter] = {
+          unlockDate: unlockDate ? String(unlockDate).substring(0,10) : "",
+          status: status || "open"
+        };
+      }
+    });
+  } catch(e) {
+    console.warn("載入章節設定失敗，使用全部開放預設值", e);
+    chapterSettings = {};
+  }
+}
+
+function isChapterUnlocked(chapterValue) {
+  const setting = chapterSettings[chapterValue];
+  if (!setting) return true;  // 沒設定 = 預設開放
+  if (setting.status === "open") return true;
+  if (setting.status === "locked") return false;
+  if (setting.status === "scheduled") {
+    if (!setting.unlockDate) return true;
+    return new Date() >= new Date(setting.unlockDate + "T00:00:00");
+  }
+  return true;
+}
+
+function getChapterLockReason(chapterValue) {
+  const setting = chapterSettings[chapterValue];
+  if (!setting) return "";
+  if (setting.status === "locked") return "（已鎖定）";
+  if (setting.status === "scheduled" && setting.unlockDate) {
+    return `（${setting.unlockDate} 開放）`;
+  }
+  return "";
+}
+
+// 章節清單（依分組排序）
+const CHAPTERS = [
+  { group: "四大基本組織", items: [
+    { val: "Epithelium",         label: "Epithelium" },
+    { val: "Connective Tissue",  label: "Connective Tissue" },
+    { val: "Muscle",             label: "Muscle" },
+    { val: "Nervous Tissue",     label: "Nervous Tissue" },
+  ]},
+  { group: "器官系統", items: [
+    { val: "Cartilage and Bone",        label: "Cartilage and Bone" },
+    { val: "Blood and Bone Marrow",     label: "Blood and Bone Marrow" },
+    { val: "Cardiovascular System",     label: "Cardiovascular System" },
+    { val: "Lymphatic System",          label: "Lymphatic System" },
+    { val: "Integumentary System",      label: "Integumentary System" },
+    { val: "Respiratory System",        label: "Respiratory System" },
+    { val: "Gastrointestinal Tract",    label: "Gastrointestinal Tract" },
+    { val: "Digestive Glands",          label: "Digestive Glands" },
+    { val: "Urinary System",            label: "Urinary System" },
+    { val: "Endocrine System",          label: "Endocrine System" },
+    { val: "Male Reproductive System",  label: "Male Reproductive System" },
+    { val: "Female Reproductive System",label: "Female Reproductive System" },
+    { val: "Special Senses",            label: "Special Senses" },
+  ]},
+];
+
+function buildChapterSelect() {
+  const sel = document.getElementById("chapter-select");
+  if (!sel) return;
+  sel.innerHTML = "";
+  CHAPTERS.forEach(g => {
+    const og = document.createElement("optgroup");
+    og.label = g.group;
+    g.items.forEach(it => {
+      const opt = document.createElement("option");
+      const unlocked = isChapterUnlocked(it.val);
+      opt.value = it.val;
+      if (unlocked) {
+        opt.text = it.label;
+      } else {
+        const reason = getChapterLockReason(it.val);
+        opt.text = `🔒 ${it.label} ${reason}`;
+        opt.disabled = true;
+        opt.style.color = "#9CA3AF";
+      }
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+}
+
+let currentUser = "";
+let currentChapter = "";
+let currentMode = "";
+let originalQuizData = [];
+let quizData = [];
+let currentIdx = 0;
+let score = 0;
+let wrongAnswers = [];
+let timerInterval;
+let timeLeft = 35;
+let isPracticeMode = false;
+let overviewChartInstance = null;
+let distChartInstance = null;
+
+// ─── Anti-cheat（Stage 2 專用）──────────────────
+let violationCount = 0;  // 整份測驗的違規次數累計
+let cheatLock = false;   // 防重入：違規處理中暫停所有偵測
+
+function isInStage2Quiz() {
+  return currentMode === "2" && !document.getElementById("quiz-section").classList.contains("hidden");
+}
+
+// 顯示非阻塞警告條（頂端 fixed，2 秒自動消失）
+function showCheatToast(reason) {
+  let toast = document.getElementById("cheat-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "cheat-toast";
+    toast.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#DC2626;color:#fff;padding:14px 24px;border-radius:10px;font-size:14px;font-weight:500;box-shadow:0 8px 24px rgba(220,38,38,0.4);z-index:1000;pointer-events:none;max-width:90%;text-align:center;";
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `🚨 偵測到「<strong>${reason}</strong>」！本題 0 分，自動換題`;
+  toast.style.display = "block";
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.display = "none"; }, 1800);
+}
+
+function flagCheating(reason) {
+  if (!isInStage2Quiz()) return;
+  if (cheatLock) return;       // 已在處理中 → 忽略，避免重入
+  cheatLock = true;
+
+  violationCount++;
+  const input = document.getElementById("answer-input");
+  if (input) input.value = `${reason}(判定作弊)`;
+
+  showCheatToast(reason);      // 非阻塞，不會搶焦點
+  handleAction(true);          // 立刻換題
+
+  // 0.6 秒後解鎖（換題動畫 + setTimeout 已執行完）
+  setTimeout(() => { cheatLock = false; }, 600);
+}
+
+// 1. 切換分頁
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && isInStage2Quiz()) flagCheating("切換分頁");
+});
+
+// 2. 視窗失焦（縮小、切應用）。延遲 100ms 過濾掉 toast 自身造成的失焦
+window.addEventListener("blur", () => {
+  setTimeout(() => {
+    if (isInStage2Quiz() && !document.hasFocus()) flagCheating("視窗失焦");
+  }, 100);
+});
+
+// 3. 禁止複製/剪下/貼上
+["copy", "cut", "paste"].forEach(evt => {
+  document.addEventListener(evt, e => {
+    if (isInStage2Quiz()) {
+      e.preventDefault();
+      flagCheating(evt === "copy" ? "複製內容" : evt === "cut" ? "剪下內容" : "貼上內容");
+    }
+  });
+});
+
+// 4. 禁止右鍵選單
+document.addEventListener("contextmenu", e => {
+  if (isInStage2Quiz()) {
+    e.preventDefault();
+    flagCheating("使用右鍵選單");
+  }
+});
+
+// 5. 禁止鍵盤快捷鍵
+document.addEventListener("keydown", e => {
+  if (!isInStage2Quiz()) return;
+  const k = e.key.toLowerCase();
+  if (e.key === "F12") {
+    e.preventDefault(); flagCheating("開啟開發者工具");
+  } else if ((e.ctrlKey || e.metaKey) && ["c","v","x","a","s","p","u"].includes(k)) {
+    e.preventDefault();
+    const reasonMap = { c:"複製", v:"貼上", x:"剪下", a:"全選", s:"另存", p:"列印", u:"檢視原始碼" };
+    flagCheating(reasonMap[k]);
+  }
+});
+
+// 6. 禁止圖片拖曳
+document.addEventListener("dragstart", e => {
+  if (isInStage2Quiz()) e.preventDefault();
+});
+
+// ─── Beep ─────────────────────────────────────
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch(e) {}
+}
+
+// ─── Login ────────────────────────────────────
+function performLogin() {
+  const id = document.getElementById("student-id-input").value.trim();
+  const pwd = document.getElementById("password-input").value.trim();
+  if (!id || !pwd) return alert("請輸入學號與密碼！");
+
+  currentUser = id;
+
+  if (TEACHER_ACCOUNTS.includes(id.toLowerCase())) {
+    // → Teacher path
+    document.getElementById("login-section").classList.add("hidden");
+    document.getElementById("teacher-id-display").innerText = id;
+    document.getElementById("teacher-section").classList.remove("hidden");
+    loadChapterSettings();  // 預先載入給章節管理用
+    loadTeacherData();
+  } else {
+    // → Student path
+    document.getElementById("display-student-id").innerText = id;
+    document.getElementById("login-section").classList.add("hidden");
+    document.getElementById("dashboard-section").classList.remove("hidden");
+    // 先載入章節設定，再建立下拉選單
+    loadChapterSettings().then(() => buildChapterSelect());
+    // 延遲 1.5 秒再撈個人統計，避免和「開始載入」搶 Apps Script
+    setTimeout(() => loadPersonalStats(id), 1500);
+  }
+}
+
+function performLogout() {
+  currentUser = "";
+  myRawRows = [];
+  document.getElementById("dashboard-section").classList.add("hidden");
+  document.getElementById("my-summary-section").classList.add("hidden");
+  document.getElementById("login-section").classList.remove("hidden");
+  document.getElementById("student-id-input").value = "";
+  document.getElementById("password-input").value = "";
+  document.getElementById("my-summary-btn").style.display = "none";
+  document.getElementById("personal-stats").style.display = "none";
+  if (window.msTrendChart) { window.msTrendChart.destroy(); window.msTrendChart = null; }
+}
+
+function teacherLogout() {
+  currentUser = "";
+  document.getElementById("teacher-section").classList.add("hidden");
+  document.getElementById("login-section").classList.remove("hidden");
+  document.getElementById("student-id-input").value = "";
+  document.getElementById("password-input").value = "";
+}
+
+// ─── Feedback ─────────────────────────────────
+function openFeedback() {
+  document.getElementById("feedback-modal").classList.remove("hidden");
+  document.getElementById("feedback-status").style.display = "none";
+  document.getElementById("feedback-content").value = "";
+  document.getElementById("feedback-name").value = "";
+}
+function closeFeedback() {
+  document.getElementById("feedback-modal").classList.add("hidden");
+}
+async function submitFeedback() {
+  const content = document.getElementById("feedback-content").value.trim();
+  const name = document.getElementById("feedback-name").value.trim() || "匿名";
+  const type = document.getElementById("feedback-type").value;
+  const status = document.getElementById("feedback-status");
+  const btn = document.getElementById("feedback-submit-btn");
+
+  if (!content) {
+    status.style.display = "block";
+    status.style.background = "var(--danger-light)";
+    status.style.color = "var(--danger)";
+    status.innerText = "請填寫意見內容";
+    return;
+  }
+
+  btn.disabled = true; btn.innerText = "送出中…";
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "submitFeedback", name, type, content }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    status.style.display = "block";
+    status.style.background = "var(--success-light)";
+    status.style.color = "var(--success)";
+    status.innerText = "✓ 感謝您的回饋！";
+    setTimeout(closeFeedback, 1500);
+  } catch(e) {
+    status.style.display = "block";
+    status.style.background = "var(--danger-light)";
+    status.style.color = "var(--danger)";
+    status.innerText = "送出失敗，請稍後再試";
+  } finally {
+    btn.disabled = false; btn.innerText = "送出意見";
+  }
+}
+
+// ─── Personal stats (student) ─────────────────
+// 全域：個人作答原始 rows（給「我的作答總評語」共用）
+let myRawRows = [];
+
+async function loadPersonalStats(studentId) {
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=getLeaderboard`);
+    const json = await res.json();
+    if (json.status !== "success") return;
+    const rows = json.data.slice(1); // skip header row
+    const mine = rows.filter(r => String(r[1]).trim().toLowerCase() === studentId.toLowerCase());
+    myRawRows = mine;  // 暫存（供總評語使用）
+    if (mine.length === 0) return;
+
+    // 主測驗（非練習）才計入「次數」與「最高分」
+    // r[7] = IsPractice 欄位（"TRUE" / "FALSE" / 空字串）。空字串視為主測驗（向前相容）
+    const isPractice = r => String(r[7] || "").trim().toUpperCase() === "TRUE";
+    const mainOnly = mine.filter(r => !isPractice(r));
+    const s2 = mainOnly.filter(r => String(r[3]) === "2");
+    const best = s2.length ? Math.max(...s2.map(r => Number(r[4]) || 0)) : null;
+
+    document.getElementById("stat-attempts").innerText = mainOnly.length;
+    document.getElementById("stat-best").innerText = best !== null ? best + " 分" : "—";
+    document.getElementById("personal-stats").style.display = "grid";
+    document.getElementById("my-summary-btn").style.display = "block";
+  } catch(e) {}
+}
+
+// ─── 我的作答總評語 ────────────────────────────────
+function openMySummary() {
+  document.getElementById("dashboard-section").classList.add("hidden");
+  document.getElementById("my-summary-section").classList.remove("hidden");
+  document.getElementById("my-summary-id").innerText = currentUser;
+
+  // 填入章節篩選器（依現有資料動態產生）
+  const chapters = [...new Set(myRawRows.map(r => String(r[2]).trim()).filter(Boolean))].sort();
+  const chapterSel = document.getElementById("summary-filter-chapter");
+  chapterSel.innerHTML = '<option value="">全部章節</option>' +
+    chapters.map(c => `<option value="${c}">${c}</option>`).join("");
+
+  // 重置篩選
+  document.getElementById("summary-filter-stage").value = "";
+  document.getElementById("summary-filter-type").value = "all";
+
+  renderMySummary();
+}
+
+function closeMySummary() {
+  document.getElementById("my-summary-section").classList.add("hidden");
+  document.getElementById("dashboard-section").classList.remove("hidden");
+  // 銷毀趨勢圖實例避免重渲染問題
+  if (window.msTrendChart) { window.msTrendChart.destroy(); window.msTrendChart = null; }
+}
+
+function renderMySummary() {
+  const loadingEl = document.getElementById("my-summary-loading");
+  const emptyEl = document.getElementById("my-summary-empty");
+  const contentEl = document.getElementById("my-summary-content");
+  loadingEl.classList.add("hidden");
+
+  // 套用篩選
+  const fChapter = document.getElementById("summary-filter-chapter").value;
+  const fStage = document.getElementById("summary-filter-stage").value;
+  const fType = document.getElementById("summary-filter-type").value;
+
+  const isPractice = r => String(r[7] || "").trim().toUpperCase() === "TRUE";
+
+  // 整理為標準 record
+  const records = myRawRows.map(r => ({
+    timestamp: r[0],
+    chapter: String(r[2]).trim(),
+    stage: String(r[3]).trim(),
+    score: Number(r[4]) || 0,
+    wrongImgs: r[5] || "",
+    violations: Number(r[6]) || 0,
+    isPractice: isPractice(r)
+  }));
+
+  let filtered = records;
+  if (fChapter) filtered = filtered.filter(r => r.chapter === fChapter);
+  if (fStage) filtered = filtered.filter(r => r.stage === fStage);
+  if (fType === "main") filtered = filtered.filter(r => !r.isPractice);
+  else if (fType === "practice") filtered = filtered.filter(r => r.isPractice);
+
+  if (filtered.length === 0) {
+    emptyEl.classList.remove("hidden");
+    contentEl.classList.add("hidden");
+    return;
+  }
+  emptyEl.classList.add("hidden");
+  contentEl.classList.remove("hidden");
+
+  // ── 總體統計 ──
+  const scores = filtered.map(r => r.score);
+  const avg = Math.round(scores.reduce((a,b) => a+b, 0) / scores.length);
+  document.getElementById("ms-total-attempts").innerText = filtered.length;
+  document.getElementById("ms-avg-score").innerText = avg;
+  document.getElementById("ms-best-score").innerText = Math.max(...scores);
+  document.getElementById("ms-low-score").innerText = Math.min(...scores);
+
+  // ── 章節熱力圖 ──
+  const chMap = {};
+  filtered.forEach(r => {
+    if (!chMap[r.chapter]) chMap[r.chapter] = [];
+    chMap[r.chapter].push(r.score);
+  });
+  const chArr = Object.entries(chMap).map(([ch, sc]) => ({
+    chapter: ch,
+    avg: Math.round(sc.reduce((a,b)=>a+b,0) / sc.length),
+    count: sc.length
+  })).sort((a,b) => b.avg - a.avg);
+
+  const heatColor = (avg) => {
+    if (avg >= 80) return { bg: "#ECFDF5", border: "#86EFAC", text: "#065F46" };
+    if (avg >= 60) return { bg: "#FEFCE8", border: "#FDE047", text: "#854D0E" };
+    if (avg >= 40) return { bg: "#FFF7ED", border: "#FDBA74", text: "#9A3412" };
+    return { bg: "#FEF2F2", border: "#FCA5A5", text: "#991B1B" };
+  };
+
+  document.getElementById("ms-heatmap").innerHTML = chArr.map(c => {
+    const col = heatColor(c.avg);
+    return `<div style="background:${col.bg};border:1px solid ${col.border};border-radius:8px;padding:10px 12px;">
+      <div style="font-size:12px;color:${col.text};font-weight:500;margin-bottom:4px;line-height:1.3;">${c.chapter}</div>
+      <div style="display:flex;align-items:baseline;gap:6px;">
+        <div style="font-size:20px;font-weight:600;color:${col.text};">${c.avg}</div>
+        <div style="font-size:10px;color:${col.text};opacity:0.7;">分 · ${c.count}次</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  // ── 趨勢圖（最近 20 次）──
+  const recent = [...filtered]
+    .sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp))
+    .slice(-20);
+  const trendCtx = document.getElementById("ms-trend-chart").getContext("2d");
+  if (window.msTrendChart) window.msTrendChart.destroy();
+  window.msTrendChart = new Chart(trendCtx, {
+    type: "line",
+    data: {
+      labels: recent.map((_, i) => `#${i+1}`),
+      datasets: [{
+        label: "得分",
+        data: recent.map(r => r.score),
+        borderColor: "#2563EB",
+        backgroundColor: "rgba(37,99,235,0.1)",
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointRadius: recent.map(r => r.isPractice ? 5 : 4),
+        pointBackgroundColor: recent.map(r => r.isPractice ? "#D97706" : "#2563EB"),
+        pointBorderColor: "#fff",
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const r = recent[ctx.dataIndex];
+              const tag = r.isPractice ? "🎯 練習" : "📝 主測驗";
+              return `${tag} · ${r.chapter} · Stage ${r.stage} · ${r.score}分`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { stepSize: 20 } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // ── 錯題練習成效 ──
+  const mainRecs = records.filter(r => !r.isPractice);
+  const practiceRecs = records.filter(r => r.isPractice);
+  const practiceCard = document.getElementById("ms-practice-card");
+
+  if (practiceRecs.length === 0) {
+    practiceCard.querySelector("#ms-practice-content").innerHTML =
+      `<div style="text-align:center;padding:1rem;color:var(--muted);font-size:13px;">尚無錯題練習紀錄。完成測驗後可從結算頁啟動「練習錯題」。</div>`;
+  } else {
+    // 比較同章節 + 同 stage 的主測驗 vs 練習
+    const compareMap = {};
+    [...mainRecs, ...practiceRecs].forEach(r => {
+      const k = `${r.chapter}|${r.stage}`;
+      if (!compareMap[k]) compareMap[k] = { chapter: r.chapter, stage: r.stage, main: [], prac: [] };
+      if (r.isPractice) compareMap[k].prac.push(r.score);
+      else compareMap[k].main.push(r.score);
+    });
+    const compares = Object.values(compareMap)
+      .filter(d => d.main.length && d.prac.length)
+      .map(d => ({
+        ...d,
+        mainAvg: Math.round(d.main.reduce((a,b)=>a+b,0) / d.main.length),
+        pracAvg: Math.round(d.prac.reduce((a,b)=>a+b,0) / d.prac.length)
+      }))
+      .sort((a,b) => (b.pracAvg - b.mainAvg) - (a.pracAvg - a.mainAvg));
+
+    if (compares.length === 0) {
+      practiceCard.querySelector("#ms-practice-content").innerHTML =
+        `<div style="font-size:13px;color:var(--muted);line-height:1.7;">已完成 <strong style="color:var(--text);">${practiceRecs.length}</strong> 次錯題練習，平均分 <strong style="color:var(--accent);">${Math.round(practiceRecs.map(r=>r.score).reduce((a,b)=>a+b,0)/practiceRecs.length)}</strong> 分。<br>尚未有可比對的主測驗紀錄。</div>`;
+    } else {
+      practiceCard.querySelector("#ms-practice-content").innerHTML = compares.map(d => {
+        const diff = d.pracAvg - d.mainAvg;
+        const diffColor = diff > 0 ? "var(--success)" : diff < 0 ? "var(--danger)" : "var(--muted)";
+        const diffSign = diff > 0 ? "↑" : diff < 0 ? "↓" : "→";
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:500;margin-bottom:2px;">${d.chapter}</div>
+            <div style="font-size:11px;color:var(--muted);">Stage ${d.stage} · 主測驗 ${d.mainAvg}分 → 練習 ${d.pracAvg}分</div>
+          </div>
+          <div style="font-size:15px;font-weight:600;color:${diffColor};">${diffSign} ${Math.abs(diff)}</div>
+        </div>`;
+      }).join("");
+    }
+  }
+
+  // ── 薄弱章節 Top 3 ──
+  const weakCard = document.getElementById("ms-weak-card");
+  const weakArr = chArr.filter(c => c.avg < 70).slice(-3).reverse(); // 取最低 3 個
+  if (weakArr.length === 0) {
+    weakCard.querySelector("#ms-weak-content").innerHTML =
+      `<div style="font-size:13px;color:var(--success);line-height:1.7;">🎉 所有章節平均分皆達 70 分以上，表現優異！</div>`;
+  } else {
+    weakCard.querySelector("#ms-weak-content").innerHTML = weakArr.map((c, idx) => {
+      const col = heatColor(c.avg);
+      return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;${idx < weakArr.length - 1 ? 'border-bottom:1px solid var(--border);' : ''}">
+        <div style="width:28px;height:28px;border-radius:50%;background:${col.border};color:${col.text};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;">${idx+1}</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:500;margin-bottom:2px;">${c.chapter}</div>
+          <div style="font-size:11px;color:var(--muted);">作答 ${c.count} 次</div>
+        </div>
+        <div style="font-size:18px;font-weight:600;color:${col.text};">${c.avg}<span style="font-size:11px;font-weight:400;opacity:0.7;">分</span></div>
+      </div>`;
+    }).join("");
+  }
+
+  // ── 智能學習建議（總評語）──
+  renderInsight(filtered, records, chArr, mainRecs, practiceRecs);
+}
+
+function renderInsight(filtered, allRecords, chArr, mainRecs, practiceRecs) {
+  const lines = [];
+  const total = filtered.length;
+  const avg = Math.round(filtered.map(r => r.score).reduce((a,b)=>a+b,0) / total);
+
+  // 1. 整體表現
+  if (avg >= 90) lines.push(`🏆 你的平均分 <strong>${avg}</strong> 分，表現優異！繼續保持這份穩定。`);
+  else if (avg >= 80) lines.push(`🌟 你的平均分 <strong>${avg}</strong> 分，基礎相當扎實。`);
+  else if (avg >= 70) lines.push(`💪 你的平均分 <strong>${avg}</strong> 分，已建立良好基礎，再加強錯題回顧可達到 80+。`);
+  else if (avg >= 60) lines.push(`👍 你的平均分 <strong>${avg}</strong> 分，剛過及格線，建議針對薄弱章節加強練習。`);
+  else if (avg >= 40) lines.push(`📚 你的平均分 <strong>${avg}</strong> 分，需要更多投入。建議從 Stage 1（選擇題）打底。`);
+  else lines.push(`🌱 你的平均分 <strong>${avg}</strong> 分，別氣餒！從基礎章節開始，逐章鞏固。`);
+
+  // 2. 薄弱章節提醒（取 < 60 分的）
+  const weakChapters = chArr.filter(c => c.avg < 60).map(c => c.chapter);
+  if (weakChapters.length > 0) {
+    lines.push(`📌 <strong>${weakChapters.join("、")}</strong> 等章節平均分偏低，建議優先複習解析。`);
+  }
+
+  // 3. 錯題練習成效
+  if (practiceRecs.length > 0 && mainRecs.length > 0) {
+    const mAvg = Math.round(mainRecs.map(r=>r.score).reduce((a,b)=>a+b,0) / mainRecs.length);
+    const pAvg = Math.round(practiceRecs.map(r=>r.score).reduce((a,b)=>a+b,0) / practiceRecs.length);
+    const diff = pAvg - mAvg;
+    if (diff >= 10) lines.push(`🎯 你已完成 <strong>${practiceRecs.length}</strong> 次錯題練習，練習平均比主測驗高 <strong style="color:var(--success);">+${diff}</strong> 分，回顧錯題的習慣很有效！`);
+    else if (diff >= 0) lines.push(`🎯 你已完成 <strong>${practiceRecs.length}</strong> 次錯題練習，與主測驗平均相當，建議多複習解析後再練習。`);
+    else lines.push(`🎯 已完成 <strong>${practiceRecs.length}</strong> 次錯題練習，但練習平均分低於主測驗，建議練習前先閱讀錯題解析。`);
+  } else if (mainRecs.length > 0 && practiceRecs.length === 0) {
+    lines.push(`💡 你尚未使用「錯題練習」功能。完成測驗後，結算頁有「再戰錯題」按鈕，能針對性提升弱點。`);
+  }
+
+  // 4. 違規提醒（Stage 2）
+  const violationTotal = filtered.filter(r => r.stage === "2" && !r.isPractice)
+    .reduce((sum, r) => sum + (r.violations || 0), 0);
+  if (violationTotal >= 3) {
+    lines.push(`⚠️ Stage 2 跑考累計觸發違規 <strong style="color:var(--danger);">${violationTotal}</strong> 次，請留意作答誠信規範。`);
+  }
+
+  // 5. 進步趨勢（最近 10 次 vs 之前）
+  if (filtered.length >= 10) {
+    const sorted = [...filtered].sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const recent10 = sorted.slice(-5);
+    const prev = sorted.slice(0, -5);
+    const recAvg = recent10.map(r=>r.score).reduce((a,b)=>a+b,0) / recent10.length;
+    const prevAvg = prev.map(r=>r.score).reduce((a,b)=>a+b,0) / prev.length;
+    const trendDiff = Math.round(recAvg - prevAvg);
+    if (trendDiff >= 8) lines.push(`📈 最近 5 次平均比之前高 <strong style="color:var(--success);">+${trendDiff}</strong> 分，明顯進步中！`);
+    else if (trendDiff <= -8) lines.push(`📉 最近 5 次平均比之前低 <strong style="color:var(--danger);">${trendDiff}</strong> 分，建議放慢腳步穩固基礎。`);
+  }
+
+  document.getElementById("ms-insight-content").innerHTML = lines.join("<br><br>");
+}
+
+// ─── Quiz utilities (洗牌、答案標準化、選項挑選、圖片預載) ──────
+// Fisher–Yates 洗牌
+function shuffleArray(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// 偵測字串內是否含中文字（CJK Unified Ideographs 等常用範圍）
+function containsChinese(s) {
+  return /[\u4e00-\u9fff\u3400-\u4dbf]/.test(String(s || ""));
+}
+// 別名（向下相容舊呼叫名）
+const containsCJK = containsChinese;
+
+// 阿拉伯數字 / 羅馬數字（大小寫）互通：標準化成阿拉伯數字
+// 例：II → 2、iv → 4、VII → 7。支援 1–20 範圍（醫學/組織學題目足夠）
+const ROMAN_MAP = {
+  i:1, ii:2, iii:3, iv:4, v:5, vi:6, vii:7, viii:8, ix:9, x:10,
+  xi:11, xii:12, xiii:13, xiv:14, xv:15, xvi:16, xvii:17, xviii:18, xix:19, xx:20
+};
+function normalizeRomans(s) {
+  // 將連續純羅馬字母字元轉成阿拉伯數字
+  // 用 word-boundary 確保不會誤改 "vi" 在 "vital" 之中
+  return String(s).replace(/\b[ivxIVX]+\b/g, m => {
+    const key = m.toLowerCase();
+    return ROMAN_MAP[key] !== undefined ? String(ROMAN_MAP[key]) : m;
+  });
+}
+
+// 簡易英文單複數規則（不完美但涵蓋醫學常用詞）
+//   ches/shes/ses/xes/zes  → 去 es：branches → branch
+//   ies                    → y   ：bodies → body、arteries → artery
+//   s（非 ss）              → 去 s：cells → cell、glands → gland
+function stripPlural(s) {
+  if (/(ches|shes|sses|xes|zes)$/i.test(s)) return s.replace(/es$/i, "");
+  if (/ies$/i.test(s)) return s.replace(/ies$/i, "y");
+  if (/[^s]s$/i.test(s)) return s.replace(/s$/i, "");
+  return s;
+}
+
+// 寬鬆字串標準化：用於答案比對
+// - 大小寫不分
+// - 忽略所有空白（含全形空白 U+3000、不換行空白 U+00A0、tab、換行）
+// - 忽略連字號 -、底線 _、句點 .、逗號 ,
+// - 忽略單複數結尾
+// - 羅馬數字轉阿拉伯數字
+function normalizeAns(s) {
+  let t = normalizeRomans(String(s || "")).toLowerCase();
+  // 移除所有空白
+  t = t.replace(/\s+/g, "");
+  // 移除連字號、底線、逗號、句點、全形空白
+  t = t.replace(/[\-_,.\u3000]/g, "");
+  // 處理單複數：對整體做去複數
+  t = stripPlural(t);
+  return t;
+}
+// 別名（向下相容）
+const normalizeAnswer = normalizeAns;
+
+// 將 answer 欄字串拆成多個正解（用「/」或「／」分隔）
+function splitAcceptedAnswers(rawAnswer) {
+  return String(rawAnswer || "")
+    .split(/[\/\uFF0F]/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+// 比對學生答案是否與正確答案匹配（支援「/」分隔的多重正解）
+// - Stage 2/3 中，學生輸入含中文一律判錯
+// - 正解項若含中文，自動跳過該項（避免誤判）
+function checkAnswer(studentAns, correctAns) {
+  if (!studentAns) return false;
+  if (containsChinese(studentAns)) return false;
+  const studentN = normalizeAns(studentAns);
+  if (!studentN) return false;
+  const candidates = splitAcceptedAnswers(correctAns)
+    .filter(s => s && !containsChinese(s))
+    .map(s => normalizeAns(s))
+    .filter(Boolean);
+  return candidates.some(c => c === studentN);
+}
+
+// 統一介面：保留舊版 isAnswerMatch（內部呼叫 checkAnswer）
+function isAnswerMatch(studentRaw, acceptedRaw, opts = {}) {
+  const { rejectCJK = false } = opts;
+  // 選擇題模式（rejectCJK = false）允許學生答案含中文（選項本可中文）
+  // → 改用標準化後直接比對
+  if (!rejectCJK) {
+    if (!studentRaw) return false;
+    const studentN = normalizeAns(studentRaw);
+    if (!studentN) return false;
+    const candidates = splitAcceptedAnswers(acceptedRaw)
+      .map(s => normalizeAns(s))
+      .filter(Boolean);
+    return candidates.some(c => c === studentN);
+  }
+  return checkAnswer(studentRaw, acceptedRaw);
+}
+
+// 解析格式化：依換行（Alt+Enter）斷行；若使用者自帶編號，編號保留呈現
+function formatExplanation(text) {
+  if (!text) return "無";
+  const raw = String(text).trim();
+  if (!raw) return "無";
+
+  // 純依換行拆分（含 \n、\r、Sheet 的 Alt+Enter 也是 \n）
+  const parts = raw.split(/\r?\n+/).map(s => s.trim()).filter(Boolean);
+
+  if (parts.length <= 1) {
+    // 只有一行 → 直接呈現，不列點
+    return `<span style="line-height:1.7;">${raw}</span>`;
+  }
+
+  // 多行 → 每行各成一列，原始編號（1. / (1) / ① 等）原樣保留
+  return `<div style="line-height:1.8;margin-top:4px;">
+    ${parts.map(p => `<div style="margin-bottom:2px;">${p}</div>`).join("")}
+  </div>`;
+}
+
+// 為某一題挑出 4 個選項（含正解 + 3 干擾）
+// 規則（對齊舊版 v2_0515 設計）：
+//   1. 若 q.options 有內容（逗號分隔），優先用
+//   2. 否則：依 q["options group"] 挑同組答案做干擾（取 "/" 前段、去重、洗牌、截 3 個）
+//   3. 不足 4 個 → 從整個章節題庫補
+//   4. 最後再整體洗牌
+function buildOptions(q, pool) {
+  const correctAns = splitAcceptedAnswers(q.answer)[0] || String(q.answer || "").trim();
+
+  let options;
+  if (q.options && String(q.options).trim()) {
+    // 1. options 欄有自訂選項 → 直接用
+    options = String(q.options).split(",").map(s => s.trim()).filter(Boolean);
+  } else {
+    // 2. 依 options group 挑同組答案
+    const groupKey = q["options group"];   // Sheet 欄名含空格
+    const sameGroup = groupKey
+      ? pool.filter(d => d["options group"] === groupKey
+          && (splitAcceptedAnswers(d.answer)[0] || "").trim() !== correctAns)
+      : [];
+    // 同組可選的乾淨答案池（取「/」前段、去重）
+    const groupPool = [...new Set(
+      sameGroup.map(d => (splitAcceptedAnswers(d.answer)[0] || "").trim()).filter(Boolean)
+    )];
+    // 洗牌、截 3 個當干擾選項
+    const shuffledGroup = shuffleArray(groupPool).slice(0, 3);
+
+    options = [correctAns, ...shuffledGroup];
+
+    // 3. 不足 4 個 → 從「該章節」其他答案任挑補足
+    if (options.length < 4) {
+      const usedSet = new Set(options);
+      const restPool = [...new Set(
+        pool
+          .map(d => (splitAcceptedAnswers(d.answer)[0] || "").trim())
+          .filter(a => a && !usedSet.has(a))
+      )];
+      const shuffledRest = shuffleArray(restPool);
+      while (options.length < 4 && shuffledRest.length > 0) options.push(shuffledRest.shift());
+    }
+  }
+
+  // 4. 整體洗牌
+  return shuffleArray(options);
+}
+
+// 圖片預載（避免後段題目 lag）
+function preloadImages(urls) {
+  urls.forEach(u => {
+    if (!u) return;
+    const img = new Image();
+    img.src = u;
+  });
+}
+
+// ─── Quiz flow ────────────────────────────────
+async function startQuiz() {
+  const errEl = document.getElementById("start-error");
+  errEl.style.display = "none";
+
+  const chapterSel = document.getElementById("chapter-select");
+  const selectedChapter = chapterSel.value;
+  currentChapter = chapterSel.options[chapterSel.selectedIndex].text;
+  currentMode = document.getElementById("stage-select").value;
+
+  console.log("[startQuiz] selectedChapter =", selectedChapter, "mode =", currentMode);
+
+  if (!selectedChapter) {
+    errEl.innerText = "請先選擇一個章節！";
+    errEl.style.display = "block";
+    return;
+  }
+
+  if (!isChapterUnlocked(selectedChapter)) {
+    const reason = getChapterLockReason(selectedChapter) || "（暫未開放）";
+    errEl.innerText = `🔒 此章節 ${reason}，請選擇其他章節`;
+    errEl.style.display = "block";
+    return;
+  }
+
+  const btn = document.getElementById("start-btn");
+  btn.innerText = "載入中…"; btn.disabled = true;
+
+  try {
+    const url = `${SCRIPT_URL}?action=getQuestions&topic=${encodeURIComponent(selectedChapter)}`;
+    console.log("[startQuiz] fetching:", url);
+
+    // 用 Promise.race 實作 timeout（相容 Artifacts iframe，不能用 AbortSignal）
+    const fetchPromise = fetch(url).then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("連線逾時（15 秒）")), 15000)
+    );
+
+    const result = await Promise.race([fetchPromise, timeoutPromise]);
+    console.log("[startQuiz] response:", result);
+
+    if (result.status !== "success") {
+      throw new Error(result.message || "後端回傳錯誤");
+    }
+    if (!result.data || result.data.length === 0) {
+      throw new Error(`「${selectedChapter}」章節尚未上傳題庫`);
+    }
+
+    const formatted = result.data.map(item => {
+      let url = item.img || "";
+      const match = url.match(/(?:id=|\/d\/)([\w-]+)/);
+      if (match && match[1]) url = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
+      return { ...item, img: url };
+    });
+
+    originalQuizData = [...formatted];
+    // 每次測驗開始時洗牌題目順序
+    quizData = shuffleArray(formatted);
+    isPracticeMode = false;
+    violationCount = 0;  // 新測驗開始 → 重置違規計數
+
+    // 預載前 5 張圖片，避免 quiz 開始時等待
+    preloadImages(quizData.slice(0, 5).map(q => q.img));
+
+    document.getElementById("dashboard-section").classList.add("hidden");
+    document.getElementById("quiz-section").classList.remove("hidden");
+    setupModeUI();
+    loadQuestion();
+  } catch(err) {
+    console.error("[startQuiz] error:", err);
+    errEl.innerText = "❌ " + (err.message || String(err));
+    errEl.style.display = "block";
+  } finally {
+    btn.innerText = "開始載入"; btn.disabled = false;
+  }
+}
+
+function setupModeUI() {
+  currentIdx = 0;
+  if (!isPracticeMode) score = 0;
+  wrongAnswers = [];
+  document.getElementById("timer-display").classList.add("hidden");
+  document.getElementById("answer-input").classList.add("hidden");
+  document.getElementById("options-container").classList.add("hidden");
+  document.getElementById("explanation-box").classList.add("hidden");
+  document.getElementById("feedback-msg").classList.add("hidden");
+  document.getElementById("cheat-warning").classList.add("hidden");
+  document.body.classList.remove("stage2-active");
+  if (currentMode === "2") {
+    document.getElementById("timer-display").classList.remove("hidden");
+    document.getElementById("cheat-warning").classList.remove("hidden");
+    document.body.classList.add("stage2-active");
+  }
+}
+
+function loadQuestion() {
+  if (currentIdx >= quizData.length) return endQuiz();
+  const q = quizData[currentIdx];
+  const imgEl = document.getElementById("quiz-image");
+  imgEl.style.opacity = "1";  // 重置上一張的破圖樣式
+  imgEl.alt = "組織圖";
+  imgEl.src = q.img || "";
+
+  // 預載未來 3 題的圖片，避免後段 lag
+  const future = quizData.slice(currentIdx + 1, currentIdx + 4).map(x => x.img);
+  preloadImages(future);
+
+  // 顯示題目文字（若 sheet 沒填則 fallback）
+  const qTextEl = document.getElementById("question-text");
+  const qText = (q.question || "").toString().trim();
+  if (qText) {
+    qTextEl.innerText = qText;
+    qTextEl.classList.remove("hidden");
+  } else {
+    // Fallback：依模式顯示通用題幹
+    const fallback = currentMode === "1" ? "請選出正確的組織/細胞名稱" :
+                     "請輸入指定的組織/細胞名稱";
+    qTextEl.innerText = fallback;
+    qTextEl.classList.remove("hidden");
+  }
+
+  const pct = Math.round((currentIdx / quizData.length) * 100);
+  document.getElementById("progress-text").innerText = `Q ${currentIdx + 1} / ${quizData.length}`;
+  document.getElementById("progress-bar").style.width = pct + "%";
+  document.getElementById("feedback-msg").classList.add("hidden");
+  document.getElementById("explanation-box").classList.add("hidden");
+  document.getElementById("action-btn").classList.remove("hidden");
+  document.getElementById("action-btn").innerText = "送出答案";
+
+  if (currentMode === "1") {
+    document.getElementById("options-container").classList.remove("hidden");
+    const optsContainer = document.getElementById("options-container");
+    optsContainer.innerHTML = "";
+    // 使用新版選項挑選：含 options 欄、同 group、同章節三層 fallback；正解 + 3 干擾；最後洗牌
+    const options = buildOptions(q, originalQuizData);
+    options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "opt-btn";
+      btn.innerText = opt;
+      btn.onclick = () => {
+        Array.from(optsContainer.children).forEach(c => c.classList.remove("selected"));
+        btn.classList.add("selected");
+        optsContainer.dataset.selected = opt;
+      };
+      optsContainer.appendChild(btn);
+    });
+    delete optsContainer.dataset.selected;
+  } else if (currentMode === "2") {
+    document.getElementById("answer-input").classList.remove("hidden");
+    const input = document.getElementById("answer-input");
+    input.value = ""; input.disabled = false; input.focus();
+    startTimer();
+  }
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = 35;
+  const display = document.getElementById("timer-display");
+  display.className = "timer-badge";
+  display.innerText = `${timeLeft}s`;
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    display.innerText = `${timeLeft}s`;
+    if (timeLeft <= 5) display.classList.add("critical");
+    if (timeLeft <= 0) { clearInterval(timerInterval); playBeep(); handleAction(true); }
+  }, 1000);
+}
+
+function handleAction(isTimeout = false) {
+  const q = quizData[currentIdx];
+  const feedback = document.getElementById("feedback-msg");
+  clearInterval(timerInterval);
+  document.getElementById("action-btn").classList.add("hidden");
+
+  let isCorrect = false, studentAnsText = "";
+
+  if (currentMode === "1") {
+    const sel = document.getElementById("options-container").dataset.selected;
+    if (!sel && !isTimeout) {
+      document.getElementById("action-btn").classList.remove("hidden");
+      return alert("請選擇一個答案！");
+    }
+    studentAnsText = sel || "(未選擇)";
+    // 選擇題：寬鬆比對 + 多重正解（含 / 分隔），但不偵測中文（選項本可含中文）
+    isCorrect = sel ? isAnswerMatch(sel, q.answer, { rejectCJK: false }) : false;
+  } else {
+    // Stage 2：即使逾時，也讀取輸入框內容進入評分
+    const inputEl = document.getElementById("answer-input");
+    const rawInput = inputEl.value.trim();
+    inputEl.disabled = true;
+
+    if (rawInput === "") {
+      isCorrect = false;
+      studentAnsText = isTimeout ? "⏰ 逾時未作答" : "(未作答)";
+    } else {
+      // 寬鬆比對：大小寫、空白、符號、單複數、阿拉伯/羅馬數字皆統一；中文不給分；多重正解
+      isCorrect = checkAnswer(rawInput, q.answer);
+      // 逾時但有作答 → 顯示「⏰ xxx（逾時自動送出）」（沿用舊檔文字）
+      studentAnsText = isTimeout ? `⏰ ${rawInput}（逾時自動送出）` : rawInput;
+    }
+  }
+
+  feedback.classList.remove("hidden");
+
+  // 計分（無論是否逾時，只要答對就給分）
+  if (isCorrect && !isPracticeMode) score += (100 / quizData.length);
+
+  if (isTimeout) {
+    feedback.className = "feedback-strip timeout";
+    feedback.innerText = "⏰ 時間到！自動換題…";
+  } else if (isCorrect) {
+    confetti({ particleCount: 80, spread: 65, origin: { y: 0.6 } });
+    feedback.className = "feedback-strip correct"; feedback.innerText = "✓ 正確！";
+  } else {
+    feedback.className = "feedback-strip wrong"; feedback.innerText = "✗ 錯誤！";
+  }
+
+  wrongAnswers.push({ img: q.img, question: q.question || "", studentAns: studentAnsText, correctAns: q.answer, explanation: q.explanation, isCorrect });
+  setTimeout(() => { currentIdx++; loadQuestion(); }, 900);
+}
+
+function endQuiz() {
+  document.body.classList.remove("stage2-active");
+  document.getElementById("quiz-section").classList.add("hidden");
+  document.getElementById("result-section").classList.remove("hidden");
+
+  const finalScore = Math.round(score);
+  const ring = document.getElementById("score-ring");
+  const numEl = document.getElementById("final-score-num");
+
+  numEl.innerText = finalScore;
+  const color = finalScore >= 80 ? "var(--success)" : finalScore >= 50 ? "var(--amber)" : "var(--danger)";
+  ring.style.borderColor = color; numEl.style.color = color;
+
+  const summaryEl = document.getElementById("summary-comment");
+  if (currentMode === "2" && !isPracticeMode) {
+    summaryEl.classList.remove("hidden");
+    let sticker, msg, color;
+    if (finalScore === 100)      { sticker = "🏆";  msg = "滿分通關！你就是組織學大師！"; color = "#D97706"; }
+    else if (finalScore >= 90)   { sticker = "🎉";  msg = "太神啦！表現幾近完美！";       color = "#D97706"; }
+    else if (finalScore >= 80)   { sticker = "🌟";  msg = "非常優秀！基礎相當穩固！";      color = "#059669"; }
+    else if (finalScore >= 70)   { sticker = "💪";  msg = "表現得不錯！再加把勁就完美了！"; color = "#059669"; }
+    else if (finalScore >= 60)   { sticker = "👍";  msg = "及格了！把錯題複習一下會更好！"; color = "#2563EB"; }
+    else if (finalScore >= 40)   { sticker = "📚";  msg = "再接再厲！多用 Stage 1 練習選擇題吧！"; color = "#D97706"; }
+    else                          { sticker = "🌱"; msg = "別氣餒！從 Stage 1 開始打好基礎！"; color = "#DC2626"; }
+
+    summaryEl.innerHTML = `
+      <div style="font-size:48px;line-height:1;margin-bottom:8px;">${sticker}</div>
+      <div style="color:${color};font-size:15px;">${msg}</div>`;
+  } else { summaryEl.classList.add("hidden"); }
+
+  // Stage 2 違規提醒
+  const violationEl = document.getElementById("violation-notice");
+  if (currentMode === "2" && !isPracticeMode && violationCount > 0) {
+    violationEl.innerHTML = `⚠️ 本次測驗共觸發 <strong>${violationCount}</strong> 次違規行為，已記錄至教師後台。`;
+    violationEl.classList.remove("hidden");
+  } else {
+    violationEl.classList.add("hidden");
+  }
+
+  const wrongs = wrongAnswers.filter(w => !w.isCorrect);
+  const wrongList = document.getElementById("wrong-answers-list");
+  wrongList.innerHTML = "";
+  if (wrongs.length > 0) {
+    document.getElementById("wrong-answers-container").classList.remove("hidden");
+    document.getElementById("practice-wrong-btn").classList.remove("hidden");
+    wrongs.forEach(w => {
+      wrongList.innerHTML += `
+        <div class="wrong-item">
+          <div class="wrong-thumb"><img src="${w.img}" alt="錯題"></div>
+          <div style="flex:1;font-size:13px;">
+            ${w.question ? `<div style="font-weight:500;color:var(--text);margin-bottom:6px;line-height:1.5;">${w.question}</div>` : ""}
+            <div style="color:var(--danger);margin-bottom:4px;">✗ 你答：<s>${w.studentAns}</s></div>
+            <div style="color:var(--success);font-weight:600;margin-bottom:6px;">✓ 正解：${w.correctAns}</div>
+            <div style="background:#EFF6FF;padding:8px 10px;border-radius:6px;color:#1E40AF;line-height:1.6;">
+              <strong>解析：</strong>${formatExplanation(w.explanation)}
+            </div>
+          </div>
+        </div>`;
+    });
+  } else {
+    document.getElementById("wrong-answers-container").classList.add("hidden");
+    document.getElementById("practice-wrong-btn").classList.add("hidden");
+  }
+
+  // 結算彩帶（只在主測驗、非練習模式）
+  if (!isPracticeMode) {
+    if (finalScore === 100) {
+      const burst = (origin) => confetti({ particleCount: 150, spread: 100, origin });
+      setTimeout(() => burst({ x: 0.2, y: 0.6 }), 100);
+      setTimeout(() => burst({ x: 0.8, y: 0.6 }), 300);
+      setTimeout(() => burst({ x: 0.5, y: 0.5 }), 500);
+    } else if (finalScore >= 80) {
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+    }
+  }
+
+  // 提交分數至後端（主測驗 & 錯題練習都送，但用 isPractice 標記區分）
+  // 錯題的圖片 ID（從 URL 取出 Drive ID，避免 URL 過長）
+  const wrongImgs = wrongAnswers
+    .filter(w => !w.isCorrect)
+    .map(w => {
+      const m = (w.img || "").match(/id=([\w-]+)/);
+      return m ? m[1] : "";
+    })
+    .filter(Boolean)
+    .join(",");
+
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "submitScore",
+      studentId: currentUser,
+      chapter: currentChapter,
+      stage: currentMode,
+      score: finalScore,
+      wrongImgs: wrongImgs,
+      violations: violationCount,
+      isPractice: isPracticeMode  // 新增：true = 錯題練習，false = 主測驗
+    }),
+    headers: { "Content-Type": "text/plain;charset=utf-8" }
+  });
+}
+
+function practiceWrongAnswers() {
+  const wrongs = wrongAnswers.filter(w => !w.isCorrect);
+  // 錯題練習時也洗牌題目順序
+  const wrongQuestions = wrongs
+    .map(w => originalQuizData.find(q => q.img === w.img))
+    .filter(Boolean);
+  quizData = shuffleArray(wrongQuestions);
+  isPracticeMode = true;
+  document.getElementById("result-section").classList.add("hidden");
+  document.getElementById("quiz-section").classList.remove("hidden");
+  setupModeUI();
+  loadQuestion();
+}
+
+function backToDashboard() {
+  document.getElementById("result-section").classList.add("hidden");
+  document.getElementById("dashboard-section").classList.remove("hidden");
+  // 刷新個人統計（讓剛完成的測驗納入「我的作答總評語」）
+  if (currentUser) {
+    setTimeout(() => loadPersonalStats(currentUser), 800);
+  }
+}
+
+// ─── Teacher Dashboard ────────────────────────
+function switchTeacherTab(id) {
+  const ids = ["t-overview","t-difficulty","t-students","t-wrongs","t-heatmap","t-individual","t-chapters"];
+  document.querySelectorAll(".teacher-tab").forEach((t, i) =>
+    t.classList.toggle("active", ids[i] === id));
+  document.querySelectorAll(".teacher-panel").forEach(p => p.classList.toggle("active", p.id === id));
+  // 切換到章節管理時刷新列表
+  if (id === "t-chapters") renderChapterMgmt();
+}
+
+async function loadTeacherData() {
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=getLeaderboard`);
+    const json = await res.json();
+    if (json.status !== "success") return;
+
+    // 欄位：[Timestamp, Student ID, Chapter, Stage, Score, WrongImgs, Violations, IsPractice]
+    // 兼容：缺欄位視為主測驗（IsPractice = false）
+    const allRows = json.data.slice(1).map(r => ({
+      ts: r[0],
+      id: String(r[1]).trim(),
+      chapter: String(r[2]).trim(),
+      stage: String(r[3]).trim(),
+      score: Number(r[4]) || 0,
+      wrongImgs: r.length > 5 ? String(r[5] || "").split(",").filter(Boolean) : [],
+      violations: r.length > 6 ? Number(r[6]) || 0 : 0,
+      isPractice: r.length > 7 ? String(r[7] || "").trim().toUpperCase() === "TRUE" : false
+    }));
+
+    // 教師後台只看主測驗，避免錯題練習污染班級統計
+    const rows = allRows.filter(r => !r.isPractice);
+
+    renderTeacherDashboard(rows);
+  } catch(e) {
+    console.error("Teacher data load failed", e);
+  }
+}
+
+function refreshDashboard() { loadTeacherData(); loadChapterSettings(); }
+
+// ─── 章節管理 ─────────────────────────────────
+function renderChapterMgmt() {
+  const listEl = document.getElementById("chapter-mgmt-list");
+  if (!listEl) return;
+  listEl.innerHTML = "";
+
+  CHAPTERS.forEach(group => {
+    listEl.innerHTML += `<div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin:1rem 0 8px;">${group.group}</div>`;
+    group.items.forEach(it => {
+      const setting = chapterSettings[it.val] || { unlockDate: "", status: "open" };
+      const status = setting.status;
+      const date = setting.unlockDate || "";
+
+      const statusColor = status === "open" ? "#059669" : status === "locked" ? "#DC2626" : "#D97706";
+      const statusBg = status === "open" ? "#ECFDF5" : status === "locked" ? "#FEF2F2" : "#FFFBEB";
+      const statusLabel = status === "open" ? "✓ 開放中" : status === "locked" ? "✕ 已鎖定" : "⏰ 排程中";
+
+      const isToday = date && new Date(date) <= new Date();
+      const effectiveLabel = status === "scheduled" && date
+        ? (isToday ? `（${date} 已開放）` : `（${date} 待開放）`)
+        : "";
+
+      listEl.innerHTML += `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+            <div style="font-size:14px;font-weight:500;">${it.label}</div>
+            <span style="background:${statusBg};color:${statusColor};font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;">${statusLabel}${effectiveLabel ? " " + effectiveLabel : ""}</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <button class="btn ${status === 'open' ? 'btn-success' : 'btn-ghost'}" style="padding:6px 14px;font-size:12px;width:auto;" onclick="saveChapterSetting('${it.val.replace(/'/g, "\\'")}', 'open', '')">立即開放</button>
+            <button class="btn ${status === 'locked' ? 'btn-danger-outline' : 'btn-ghost'}" style="padding:6px 14px;font-size:12px;width:auto;${status === 'locked' ? 'background:#FEF2F2;border-color:#DC2626;color:#DC2626;' : ''}" onclick="saveChapterSetting('${it.val.replace(/'/g, "\\'")}', 'locked', '')">永久鎖定</button>
+            <input type="date" id="date-${it.val.replace(/[^a-zA-Z]/g,'')}" value="${date}" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:12px;outline:none;">
+            <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;width:auto;${status === 'scheduled' ? 'background:#FFFBEB;border-color:#D97706;color:#D97706;' : ''}" onclick="saveScheduledChapter('${it.val.replace(/'/g, "\\'")}')">排程開放</button>
+          </div>
+        </div>`;
+    });
+  });
+}
+
+async function saveChapterSetting(chapter, status, unlockDate) {
+  const listEl = document.getElementById("chapter-mgmt-list");
+  // 樂觀更新本地狀態
+  chapterSettings[chapter] = { unlockDate: unlockDate || "", status };
+  renderChapterMgmt();
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "setChapterSetting",
+        chapter,
+        status,
+        unlockDate: unlockDate || ""
+      }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+  } catch(e) {
+    alert("儲存失敗：" + e.message);
+    await loadChapterSettings();
+    renderChapterMgmt();
+  }
+}
+
+function saveScheduledChapter(chapter) {
+  const dateInput = document.getElementById(`date-${chapter.replace(/[^a-zA-Z]/g,'')}`);
+  const date = dateInput.value;
+  if (!date) {
+    alert("請先選擇開放日期");
+    return;
+  }
+  saveChapterSetting(chapter, "scheduled", date);
+}
+
+async function bulkChapterAction(status) {
+  if (!confirm(status === "open" ? "確定要將所有章節設為立即開放嗎？" : "確定要鎖定所有章節嗎？")) return;
+  const allChapters = CHAPTERS.flatMap(g => g.items.map(it => it.val));
+  // 樂觀更新
+  allChapters.forEach(ch => { chapterSettings[ch] = { unlockDate: "", status }; });
+  renderChapterMgmt();
+
+  // 並行送出（Apps Script 會排隊處理）
+  for (const ch of allChapters) {
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "setChapterSetting", chapter: ch, status, unlockDate: "" }),
+        headers: { "Content-Type": "text/plain;charset=utf-8" }
+      });
+    } catch(e) { /* 繼續送下一個 */ }
+  }
+  alert("批次設定完成");
+}
+
+// 章節題數快取，避免每次刷新後台都重打 API
+const chapterCountCache = {};
+
+async function loadChapterQuestionCount(sheetName, elId, delayMs) {
+  await new Promise(r => setTimeout(r, delayMs));
+  const el = document.getElementById(elId);
+  if (!el) return;
+
+  // 命中快取
+  if (chapterCountCache[sheetName] !== undefined) {
+    el.innerText = `題數 ${chapterCountCache[sheetName]}`;
+    return;
+  }
+
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=getQuestions&topic=${encodeURIComponent(sheetName)}`);
+    const json = await res.json();
+    if (json.status === "success" && Array.isArray(json.data)) {
+      chapterCountCache[sheetName] = json.data.length;
+      el.innerText = `題數 ${json.data.length}`;
+    } else {
+      el.innerText = "題數 —";
+      el.style.opacity = "0.5";
+    }
+  } catch(e) {
+    el.innerText = "題數 —";
+    el.style.opacity = "0.5";
+  }
+}
+
+function renderTeacherDashboard(rows) {
+  // Summary stats
+  const uniqueStudents = [...new Set(rows.map(r => r.id.toLowerCase()))].length;
+  const attempts = rows.length;
+  const avg = attempts ? Math.round(rows.reduce((s, r) => s + r.score, 0) / attempts) : 0;
+  const uniqueChapters = [...new Set(rows.map(r => r.chapter))].length;
+
+  document.getElementById("t-students").innerText = uniqueStudents;
+  document.getElementById("t-attempts").innerText = attempts;
+  document.getElementById("t-avg").innerText = avg + " 分";
+  document.getElementById("t-chapters").innerText = uniqueChapters;
+
+  // Chapter breakdown
+  const chapterMap = {};
+  rows.forEach(r => {
+    if (!chapterMap[r.chapter]) chapterMap[r.chapter] = { s1: [], s2: [], ids: new Set() };
+    chapterMap[r.chapter].ids.add(r.id.toLowerCase());
+    if (r.stage === "1") chapterMap[r.chapter].s1.push(r.score);
+    if (r.stage === "2") chapterMap[r.chapter].s2.push(r.score);
+  });
+
+  const blocksEl = document.getElementById("chapter-blocks");
+  blocksEl.innerHTML = "";
+  const chartLabels = [], s1Avgs = [], s2Avgs = [];
+
+  Object.entries(chapterMap).forEach(([ch, data], idx) => {
+    const avg2 = data.s1.length ? Math.round(data.s1.reduce((a,b)=>a+b,0)/data.s1.length) : null;
+    const avg3 = data.s2.length ? Math.round(data.s2.reduce((a,b)=>a+b,0)/data.s2.length) : null;
+    chartLabels.push(ch.split("(")[0].trim());
+    s1Avgs.push(avg2 ?? 0);
+    s2Avgs.push(avg3 ?? 0);
+
+    // 從章節名稱抽出英文部分，那是 Apps Script 工作表名（例如 "Cardiovascular System (心血管系統)" → "Cardiovascular System"）
+    const sheetName = ch.split("(")[0].trim();
+    const qCountId = `qcount-${idx}`;
+
+    blocksEl.innerHTML += `
+      <div class="chapter-block">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;gap:10px;">
+          <h4 style="margin:0;">${ch}</h4>
+          <div style="background:var(--accent-light);color:var(--accent);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap;" id="${qCountId}">題數 …</div>
+        </div>
+        ${avg2 !== null ? `
+        <div class="stage-bar-row">
+          <span style="min-width:60px;">Stage 1</span>
+          <div class="stage-bar-track"><div class="stage-bar-fill" style="width:${avg2}%;background:#2563EB;"></div></div>
+          <span style="min-width:40px;text-align:right;font-weight:500;color:#2563EB;">${avg2}%</span>
+        </div>` : ""}
+        ${avg3 !== null ? `
+        <div class="stage-bar-row">
+          <span style="min-width:60px;">Stage 2</span>
+          <div class="stage-bar-track"><div class="stage-bar-fill" style="width:${avg3}%;background:#059669;"></div></div>
+          <span style="min-width:40px;text-align:right;font-weight:500;color:#059669;">${avg3}%</span>
+        </div>` : ""}
+        <div style="margin-top:10px;display:flex;gap:16px;font-size:11px;color:var(--muted);">
+          <span>參與 <strong style="color:var(--text);">${data.ids.size}</strong> 位</span>
+          <span>共 <strong style="color:var(--text);">${data.s1.length + data.s2.length}</strong> 次</span>
+        </div>
+      </div>`;
+
+    // 懶載入題數（背景非阻塞，避免一次打太多 API）
+    loadChapterQuestionCount(sheetName, qCountId, idx * 300);
+  });
+
+  // Overview chart
+  if (overviewChartInstance) overviewChartInstance.destroy();
+  overviewChartInstance = new Chart(document.getElementById("overviewChart"), {
+    type: "bar",
+    data: {
+      labels: chartLabels,
+      datasets: [
+        { label: "Stage 1", data: s1Avgs, backgroundColor: "#2563EB", borderRadius: 4 },
+        { label: "Stage 2", data: s2Avgs, backgroundColor: "#059669", borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 100, ticks: { callback: v => v+"%" } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Distribution chart
+  const bands = [
+    { label: "0分", min:0, max:0 },
+    { label: "1–49分", min:1, max:49 },
+    { label: "50–79分", min:50, max:79 },
+    { label: "80–99分", min:80, max:99 },
+    { label: "100分", min:100, max:100 },
+  ];
+  const distData = bands.map(b => rows.filter(r => r.score >= b.min && r.score <= b.max).length);
+  if (distChartInstance) distChartInstance.destroy();
+  distChartInstance = new Chart(document.getElementById("distChart"), {
+    type: "bar",
+    data: {
+      labels: bands.map(b => b.label),
+      datasets: [{ data: distData, backgroundColor: ["#E24B4A","#EF9F27","#185FA5","#1D9E75","#0F6E56"], borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // Insight text
+  const zeroCount = rows.filter(r => r.score === 0).length;
+  const zeroPct = Math.round(zeroCount / rows.length * 100);
+  const lowChapters = Object.entries(chapterMap)
+    .filter(([,d]) => d.s1.length && Math.round(d.s1.reduce((a,b)=>a+b,0)/d.s1.length) < 40)
+    .map(([ch]) => ch.split("(")[0].trim());
+
+  let insightHTML = "";
+  if (zeroPct > 30) insightHTML += `共有 <strong>${zeroPct}%</strong> 的測驗得 0 分，建議確認學生是否認真作答。<br>`;
+  if (lowChapters.length) insightHTML += `${lowChapters.join("、")} 等章節 Stage 1 平均偏低，建議安排課堂複習。<br>`;
+  if (!insightHTML) insightHTML = "各章節表現正常，請持續觀察學生進度。";
+  document.getElementById("insight-text").innerHTML = insightHTML;
+
+  // Student ranking
+  const studentMap = {};
+// 全域儲存最近一次載入的 rows，供個別學生查詢用
+let allLeaderboardRows = [];
+let hourChartInstance = null;
+let dayChartInstance = null;
+
+// 計算連續達標天數（任一階段得分 >= 60 視為達標）
+function calcStreak(rows) {
+  const dates = new Set();
+  rows.filter(r => r.score >= 60).forEach(r => {
+    const d = new Date(r.ts);
+    if (isNaN(d)) return;
+    dates.add(d.toISOString().substring(0,10));
+  });
+  if (dates.size === 0) return 0;
+
+  const sorted = [...dates].sort().reverse();
+  let streak = 1;
+  let prev = new Date(sorted[0] + "T00:00:00");
+  // 若最近一次達標不是今天或昨天，連續計數歸零
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diffToToday = Math.round((today - prev) / 86400000);
+  if (diffToToday > 1) return 0;
+
+  for (let i = 1; i < sorted.length; i++) {
+    const cur = new Date(sorted[i] + "T00:00:00");
+    const diff = Math.round((prev - cur) / 86400000);
+    if (diff === 1) { streak++; prev = cur; }
+    else break;
+  }
+  return streak;
+}
+
+  rows.forEach(r => {
+    const key = r.id.toLowerCase();
+    if (!studentMap[key]) studentMap[key] = { id: r.id, attempts: 0, s2Scores: [], allRows: [] };
+    studentMap[key].attempts++;
+    studentMap[key].allRows.push(r);
+    if (r.stage === "2") studentMap[key].s2Scores.push(r.score);
+  });
+
+  const students = Object.values(studentMap).map(s => ({
+    ...s,
+    best: s.s2Scores.length ? Math.max(...s.s2Scores) : null,
+    streak: calcStreak(s.allRows),
+    totalViolations: s.allRows.reduce((sum, r) => sum + (r.violations || 0), 0)
+  })).sort((a, b) => (b.best ?? -1) - (a.best ?? -1));
+
+  const colors = ["#2563EB","#059669","#D97706","#7C3AED","#DC2626","#0891B2"];
+  const bgs    = ["#EFF6FF","#ECFDF5","#FFFBEB","#F5F3FF","#FEF2F2","#ECFEFF"];
+
+  const rankEl = document.getElementById("student-rank-list");
+  rankEl.innerHTML = "";
+  students.forEach((s, i) => {
+    const initials = s.id.substring(0,2).toUpperCase();
+    const best = s.best !== null ? s.best + "分" : "—";
+    const barW = s.best !== null ? s.best : 0;
+    const c = colors[i % colors.length], bg = bgs[i % bgs.length];
+    const streakBadge = s.streak >= 2
+      ? `<span style="display:inline-flex;align-items:center;gap:2px;background:#FEF3C7;color:#92400E;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;margin-left:6px;">🔥 ${s.streak}天</span>`
+      : "";
+    const violationBadge = s.totalViolations > 0
+      ? `<span style="display:inline-flex;align-items:center;gap:2px;background:#FEF2F2;color:#991B1B;font-size:10px;font-weight:600;padding:2px 6px;border-radius:10px;margin-left:6px;">⚠️ ${s.totalViolations}</span>`
+      : "";
+    rankEl.innerHTML += `
+      <div class="student-rank-row">
+        <span style="width:20px;font-size:13px;font-weight:500;color:var(--muted);">${i+1}</span>
+        <div class="student-avatar" style="background:${bg};color:${c};">${initials}</div>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;">
+            <span style="font-weight:500;color:var(--text);">${s.id}${streakBadge}${violationBadge}</span>
+            <span>${s.attempts}次測驗</span>
+          </div>
+          <div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden;">
+            <div style="width:${barW}%;height:100%;background:${c};border-radius:3px;"></div>
+          </div>
+        </div>
+        <span style="font-size:13px;font-weight:600;min-width:44px;text-align:right;color:${c};">${best}</span>
+      </div>`;
+  });
+
+  // 儲存全域，供個別學生 panel 使用
+  allLeaderboardRows = rows;
+
+  // 渲染新增分析
+  renderWrongQuestions(rows);
+  renderHeatmap(rows);
+  buildIndividualSelector(students);
+}
+
+// ─── 1. 錯題分布 ─────────────────────────────
+function renderWrongQuestions(rows) {
+  const counter = {};  // key = imgId, value = count
+  rows.forEach(r => {
+    (r.wrongImgs || []).forEach(imgId => {
+      if (!counter[imgId]) counter[imgId] = { count: 0, chapters: new Set() };
+      counter[imgId].count++;
+      counter[imgId].chapters.add(r.chapter);
+    });
+  });
+
+  const sorted = Object.entries(counter)
+    .map(([id, data]) => ({ id, count: data.count, chapters: [...data.chapters] }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const listEl = document.getElementById("wrong-questions-list");
+  const emptyEl = document.getElementById("wrongs-empty");
+
+  if (sorted.length === 0) {
+    listEl.innerHTML = "";
+    emptyEl.style.display = "block";
+    return;
+  }
+  emptyEl.style.display = "none";
+  listEl.innerHTML = "";
+
+  const maxCount = sorted[0].count;
+  sorted.forEach((q, i) => {
+    const pct = Math.round(q.count / maxCount * 100);
+    const color = q.count >= maxCount * 0.7 ? "#DC2626" : q.count >= maxCount * 0.4 ? "#D97706" : "#2563EB";
+    const thumbUrl = `https://drive.google.com/thumbnail?id=${q.id}&sz=w200`;
+    listEl.innerHTML += `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+        <span style="width:22px;font-size:13px;font-weight:600;color:var(--muted);text-align:center;">${i+1}</span>
+        <div style="width:48px;height:48px;background:var(--bg);border-radius:6px;overflow:hidden;flex-shrink:0;border:1px solid var(--border);">
+          <img src="${thumbUrl}" style="width:100%;height:100%;object-fit:contain;" alt="錯題縮圖" onerror="this.style.opacity=0.3">
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;color:var(--text);font-weight:500;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${q.chapters.join(", ")}</div>
+          <div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;"></div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:16px;font-weight:600;color:${color};line-height:1;">${q.count}</div>
+          <div style="font-size:10px;color:var(--muted);">人答錯</div>
+        </div>
+      </div>`;
+  });
+}
+
+// ─── 2. 學習熱力（時段 + 每日）─────────────────
+function renderHeatmap(rows) {
+  // 時段分佈（24 小時）
+  const hourBins = new Array(24).fill(0);
+  rows.forEach(r => {
+    const d = new Date(r.ts);
+    if (!isNaN(d)) hourBins[d.getHours()]++;
+  });
+
+  if (hourChartInstance) hourChartInstance.destroy();
+  hourChartInstance = new Chart(document.getElementById("hourChart"), {
+    type: "bar",
+    data: {
+      labels: hourBins.map((_, i) => `${i}時`),
+      datasets: [{
+        data: hourBins,
+        backgroundColor: hourBins.map(v => v === 0 ? "#E5E7EB" : v >= Math.max(...hourBins) * 0.7 ? "#DC2626" : "#2563EB"),
+        borderRadius: 3
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} 次作答` }}},
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } },
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, autoSkip: false, maxRotation: 0 } }
+      }
+    }
+  });
+
+  // 近 30 日作答次數
+  const today = new Date(); today.setHours(0,0,0,0);
+  const days = [];
+  const dayMap = {};
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const key = d.toISOString().substring(0,10);
+    days.push(key);
+    dayMap[key] = 0;
+  }
+  rows.forEach(r => {
+    const d = new Date(r.ts);
+    if (isNaN(d)) return;
+    const key = d.toISOString().substring(0,10);
+    if (key in dayMap) dayMap[key]++;
+  });
+
+  if (dayChartInstance) dayChartInstance.destroy();
+  dayChartInstance = new Chart(document.getElementById("dayChart"), {
+    type: "line",
+    data: {
+      labels: days.map(d => d.substring(5)),
+      datasets: [{
+        data: days.map(d => dayMap[d]),
+        borderColor: "#2563EB",
+        backgroundColor: "rgba(37, 99, 235, 0.1)",
+        fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.parsed.y} 次` }}},
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } },
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 45, autoSkip: true, maxTicksLimit: 10 } }
+      }
+    }
+  });
+}
+
+// ─── 3. 個別學生選單 ─────────────────────────
+function buildIndividualSelector(students) {
+  const sel = document.getElementById("individual-student-select");
+  sel.innerHTML = '<option value="">— 請選擇學生 —</option>';
+  students.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s.id.toLowerCase();
+    opt.text = `${s.id}（${s.attempts}次）`;
+    sel.appendChild(opt);
+  });
+}
+
+function renderIndividual() {
+  const key = document.getElementById("individual-student-select").value;
+  const contentEl = document.getElementById("individual-content");
+  if (!key) { contentEl.innerHTML = ""; return; }
+
+  const myRows = allLeaderboardRows.filter(r => r.id.toLowerCase() === key);
+  if (myRows.length === 0) { contentEl.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:1rem;">無資料</p>'; return; }
+
+  // 統計
+  const studentName = myRows[0].id;
+  const s2Rows = myRows.filter(r => r.stage === "2");
+  const best = s2Rows.length ? Math.max(...s2Rows.map(r => r.score)) : null;
+  const avg = s2Rows.length ? Math.round(s2Rows.reduce((a,b) => a + b.score, 0) / s2Rows.length) : null;
+  const streak = calcStreak(myRows);
+
+  // 章節分布
+  const chapterStats = {};
+  myRows.forEach(r => {
+    if (!chapterStats[r.chapter]) chapterStats[r.chapter] = { attempts: 0, totalScore: 0 };
+    chapterStats[r.chapter].attempts++;
+    chapterStats[r.chapter].totalScore += r.score;
+  });
+
+  // 累積錯題（去重）
+  const wrongCounts = {};
+  myRows.forEach(r => {
+    (r.wrongImgs || []).forEach(imgId => {
+      if (!wrongCounts[imgId]) wrongCounts[imgId] = { count: 0, chapters: new Set() };
+      wrongCounts[imgId].count++;
+      wrongCounts[imgId].chapters.add(r.chapter);
+    });
+  });
+  const wrongList = Object.entries(wrongCounts)
+    .sort((a,b) => b[1].count - a[1].count);
+
+  // 違規累計
+  const totalViolations = myRows.reduce((s, r) => s + (r.violations || 0), 0);
+  const violatedSessions = myRows.filter(r => (r.violations || 0) > 0).length;
+
+  let html = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:1rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:18px;font-weight:600;">${studentName}</div>
+        ${totalViolations > 0 ? `<span style="background:#FEF2F2;color:#991B1B;font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;">⚠️ 違規 ${totalViolations} 次（${violatedSessions} 場）</span>` : ""}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+        <div style="text-align:center;padding:8px;background:var(--bg);border-radius:8px;">
+          <div style="font-size:18px;font-weight:600;color:var(--accent);">${myRows.length}</div>
+          <div style="font-size:11px;color:var(--muted);">總測驗</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--bg);border-radius:8px;">
+          <div style="font-size:18px;font-weight:600;color:var(--success);">${best ?? "—"}</div>
+          <div style="font-size:11px;color:var(--muted);">最高分</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--bg);border-radius:8px;">
+          <div style="font-size:18px;font-weight:600;color:#7C3AED;">${avg ?? "—"}</div>
+          <div style="font-size:11px;color:var(--muted);">平均分</div>
+        </div>
+        <div style="text-align:center;padding:8px;background:var(--bg);border-radius:8px;">
+          <div style="font-size:18px;font-weight:600;color:#D97706;">${streak >= 1 ? "🔥" + streak : "—"}</div>
+          <div style="font-size:11px;color:var(--muted);">連續達標</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:8px;">章節作答狀況</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:1rem;">
+      ${Object.entries(chapterStats).map(([ch, s]) => {
+        const avgCh = Math.round(s.totalScore / s.attempts);
+        return `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;">
+          <span>${ch}</span>
+          <span style="color:var(--muted);">${s.attempts}次 · 平均 <strong style="color:var(--text);">${avgCh}</strong>分</span>
+        </div>`;
+      }).join("")}
+    </div>
+
+    <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:8px;">累積錯題（${wrongList.length} 題）</div>`;
+
+  if (wrongList.length === 0) {
+    html += '<p style="color:var(--muted);font-size:13px;text-align:center;padding:1rem;background:var(--bg);border-radius:8px;">沒有錯題紀錄 🎉</p>';
+  } else {
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">';
+    wrongList.forEach(([imgId, data]) => {
+      const url = `https://drive.google.com/thumbnail?id=${imgId}&sz=w200`;
+      html += `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+          <div style="aspect-ratio:1;background:var(--bg);">
+            <img src="${url}" style="width:100%;height:100%;object-fit:contain;" alt="錯題" onerror="this.style.opacity=0.3">
+          </div>
+          <div style="padding:6px 8px;text-align:center;">
+            <div style="font-size:13px;font-weight:600;color:var(--danger);">錯 ${data.count} 次</div>
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+  }
+
+  contentEl.innerHTML = html;
+}
+</script>
+</body>
+</html>
