@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HistoQuest 組織學測驗系統</title>
+  <title>HistoQuest 組織學實驗測驗系統</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -292,7 +292,7 @@
       <div class="logo-icon">醫學</div>
       <div>
         <div class="logo-text">HistoQuest</div>
-        <div class="logo-sub">組織學測驗系統 · 解剖學科</div>
+        <div class="logo-sub">組織學實驗測驗系統·解剖學科</div>
       </div>
     </div>
     <div class="field">
@@ -528,8 +528,7 @@
     <div id="question-text" class="hidden" style="font-size:15px;font-weight:500;color:var(--text);background:#F0F9FF;border-left:3px solid var(--accent);padding:10px 14px;border-radius:8px;margin-bottom:1rem;line-height:1.6;"></div>
 
     <div class="img-box">
-      <img id="quiz-image" src="" alt="組織圖" referrerpolicy="no-referrer"
-           onerror="this.style.opacity=0.3;this.alt='圖片載入失敗';">
+      <img id="quiz-image" src="" alt="組織圖" referrerpolicy="no-referrer">
     </div>
 
     <div id="answer-area">
@@ -705,7 +704,7 @@
      SCRIPT
 ═══════════════════════════════════════ -->
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCjdIRAketLq-EO3p18CbMUvmbUUH63mU1WInykv7FTiRk9GAmtzXd-2fGqJrb-18W/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyroZJmOg7soIHpjHE79SFZw7aPw44e7lRySVgK8V6xMsZ6a8Ay25wxioJrb0Dfm5slXw/exec";
 
 // 教師帳號清單（id 統一小寫比對）
 const TEACHER_ACCOUNTS = ["chh", "chhwang", "admin", "teacher"];
@@ -773,8 +772,7 @@ const CHAPTERS = [
     { val: "Lymphatic System",          label: "Lymphatic System" },
     { val: "Integumentary System",      label: "Integumentary System" },
     { val: "Respiratory System",        label: "Respiratory System" },
-    { val: "Gastrointestinal Tract",    label: "Gastrointestinal Tract" },
-    { val: "Digestive Glands",          label: "Digestive Glands" },
+    { val: "Digestive System",          label: "Digestive System" },
     { val: "Urinary System",            label: "Urinary System" },
     { val: "Endocrine System",          label: "Endocrine System" },
     { val: "Male Reproductive System",  label: "Male Reproductive System" },
@@ -1487,11 +1485,72 @@ function buildOptions(q, pool) {
 }
 
 // 圖片預載（避免後段題目 lag）
-function preloadImages(urls) {
-  urls.forEach(u => {
-    if (!u) return;
-    const img = new Image();
-    img.src = u;
+// 依 Drive 檔案 ID 建立「備援網址鏈」：一個失敗自動換下一個
+// 順序：thumbnail(大) → lh3 直連 → thumbnail(中) → uc 直連 → 原始網址
+function buildImageCandidates(q) {
+  const id = q.driveId || "";
+  const candidates = [];
+  if (id) {
+    candidates.push(`https://drive.google.com/thumbnail?id=${id}&sz=w1000`);
+    candidates.push(`https://lh3.googleusercontent.com/d/${id}=w1000`);
+    candidates.push(`https://drive.google.com/thumbnail?id=${id}&sz=w600`);
+    candidates.push(`https://lh3.googleusercontent.com/d/${id}`);
+    candidates.push(`https://drive.google.com/uc?export=view&id=${id}`);
+  }
+  if (q.img && !candidates.includes(q.img)) candidates.push(q.img);
+  return candidates;
+}
+
+// 縮圖（錯題回顧、教師後台）用的備援切換：onerror 時換下一個候選網址
+function imgFallback(imgEl) {
+  try {
+    const cands = JSON.parse(decodeURIComponent(imgEl.dataset.cands || "[]"));
+    let idx = parseInt(imgEl.dataset.idx || "0", 10) + 1;
+    if (idx < cands.length) {
+      imgEl.dataset.idx = String(idx);
+      imgEl.src = cands[idx];
+    } else {
+      imgEl.onerror = null;
+      imgEl.style.opacity = "0.3";
+      imgEl.alt = "圖片載入失敗";
+    }
+  } catch (e) {
+    imgEl.onerror = null;
+    imgEl.style.opacity = "0.3";
+  }
+}
+
+// 將圖片套到 <img>，並掛上「失敗就換下一個候選」的邏輯
+function setImageWithFallback(imgEl, q) {
+  const candidates = buildImageCandidates(q);
+  let idx = 0;
+
+  function tryNext() {
+    if (idx >= candidates.length) {
+      // 全部失敗
+      imgEl.onerror = null;
+      imgEl.style.opacity = "0.3";
+      imgEl.alt = "圖片載入失敗";
+      return;
+    }
+    imgEl.style.opacity = "1";
+    imgEl.alt = "組織圖";
+    imgEl.onerror = () => { idx++; tryNext(); };
+    imgEl.src = candidates[idx];
+  }
+  tryNext();
+}
+
+function preloadImages(items) {
+  items.forEach(it => {
+    if (!it) return;
+    // it 可能是字串(舊用法)或題目物件
+    const q = typeof it === "string" ? { img: it, driveId: "" } : it;
+    const candidates = buildImageCandidates(q);
+    if (candidates[0]) {
+      const img = new Image();
+      img.src = candidates[0];
+    }
   });
 }
 
@@ -1547,10 +1606,11 @@ async function startQuiz() {
     }
 
     const formatted = result.data.map(item => {
-      let url = item.img || "";
-      const match = url.match(/(?:id=|\/d\/)([\w-]+)/);
-      if (match && match[1]) url = `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1000`;
-      return { ...item, img: url };
+      let rawUrl = item.img || "";
+      const match = rawUrl.match(/(?:id=|\/d\/)([\w-]+)/);
+      const driveId = match && match[1] ? match[1] : "";
+      // 保留原始網址 + Drive 檔案 ID，圖片載入時用備援鏈逐一嘗試
+      return { ...item, img: rawUrl, driveId: driveId };
     });
 
     originalQuizData = [...formatted];
@@ -1560,7 +1620,7 @@ async function startQuiz() {
     violationCount = 0;  // 新測驗開始 → 重置違規計數
 
     // 預載前 5 張圖片，避免 quiz 開始時等待
-    preloadImages(quizData.slice(0, 5).map(q => q.img));
+    preloadImages(quizData.slice(0, 5));
 
     document.getElementById("dashboard-section").classList.add("hidden");
     document.getElementById("quiz-section").classList.remove("hidden");
@@ -1597,12 +1657,10 @@ function loadQuestion() {
   if (currentIdx >= quizData.length) return endQuiz();
   const q = quizData[currentIdx];
   const imgEl = document.getElementById("quiz-image");
-  imgEl.style.opacity = "1";  // 重置上一張的破圖樣式
-  imgEl.alt = "組織圖";
-  imgEl.src = q.img || "";
+  setImageWithFallback(imgEl, q);  // 用備援鏈載入（一個失敗自動換下一個）
 
   // 預載未來 3 題的圖片，避免後段 lag
-  const future = quizData.slice(currentIdx + 1, currentIdx + 4).map(x => x.img);
+  const future = quizData.slice(currentIdx + 1, currentIdx + 4);
   preloadImages(future);
 
   // 顯示題目文字（若 sheet 沒填則 fallback）
@@ -1716,7 +1774,7 @@ function handleAction(isTimeout = false) {
     feedback.className = "feedback-strip wrong"; feedback.innerText = "✗ 錯誤！";
   }
 
-  wrongAnswers.push({ img: q.img, question: q.question || "", studentAns: studentAnsText, correctAns: q.answer, explanation: q.explanation, isCorrect });
+  wrongAnswers.push({ img: q.img, driveId: q.driveId || "", question: q.question || "", studentAns: studentAnsText, correctAns: q.answer, explanation: q.explanation, isCorrect });
   setTimeout(() => { currentIdx++; loadQuestion(); }, 900);
 }
 
@@ -1766,9 +1824,13 @@ function endQuiz() {
     document.getElementById("wrong-answers-container").classList.remove("hidden");
     document.getElementById("practice-wrong-btn").classList.remove("hidden");
     wrongs.forEach(w => {
+      const cands = buildImageCandidates(w);
+      const candsAttr = encodeURIComponent(JSON.stringify(cands));
+      const firstSrc = cands[0] || "";
       wrongList.innerHTML += `
         <div class="wrong-item">
-          <div class="wrong-thumb"><img src="${w.img}" alt="錯題"></div>
+          <div class="wrong-thumb"><img src="${firstSrc}" alt="錯題" referrerpolicy="no-referrer"
+               data-cands="${candsAttr}" data-idx="0" onerror="imgFallback(this)"></div>
           <div style="flex:1;font-size:13px;">
             ${w.question ? `<div style="font-weight:500;color:var(--text);margin-bottom:6px;line-height:1.5;">${w.question}</div>` : ""}
             <div style="color:var(--danger);margin-bottom:4px;">✗ 你答：<s>${w.studentAns}</s></div>
@@ -2256,11 +2318,12 @@ function renderWrongQuestions(rows) {
     const pct = Math.round(q.count / maxCount * 100);
     const color = q.count >= maxCount * 0.7 ? "#DC2626" : q.count >= maxCount * 0.4 ? "#D97706" : "#2563EB";
     const thumbUrl = `https://drive.google.com/thumbnail?id=${q.id}&sz=w200`;
+    const altThumb = `https://lh3.googleusercontent.com/d/${q.id}=w200`;
     listEl.innerHTML += `
       <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
         <span style="width:22px;font-size:13px;font-weight:600;color:var(--muted);text-align:center;">${i+1}</span>
         <div style="width:48px;height:48px;background:var(--bg);border-radius:6px;overflow:hidden;flex-shrink:0;border:1px solid var(--border);">
-          <img src="${thumbUrl}" style="width:100%;height:100%;object-fit:contain;" alt="錯題縮圖" onerror="this.style.opacity=0.3">
+          <img src="${thumbUrl}" style="width:100%;height:100%;object-fit:contain;" alt="錯題縮圖" referrerpolicy="no-referrer" onerror="if(this.src.indexOf('lh3')<0){this.src='${altThumb}';}else{this.onerror=null;this.style.opacity=0.3;}">
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-size:12px;color:var(--text);font-weight:500;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${q.chapters.join(", ")}</div>
@@ -2443,10 +2506,11 @@ function renderIndividual() {
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">';
     wrongList.forEach(([imgId, data]) => {
       const url = `https://drive.google.com/thumbnail?id=${imgId}&sz=w200`;
+      const altUrl = `https://lh3.googleusercontent.com/d/${imgId}=w200`;
       html += `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
           <div style="aspect-ratio:1;background:var(--bg);">
-            <img src="${url}" style="width:100%;height:100%;object-fit:contain;" alt="錯題" onerror="this.style.opacity=0.3">
+            <img src="${url}" style="width:100%;height:100%;object-fit:contain;" alt="錯題" referrerpolicy="no-referrer" onerror="if(this.src.indexOf('lh3')<0){this.src='${altUrl}';}else{this.onerror=null;this.style.opacity=0.3;}">
           </div>
           <div style="padding:6px 8px;text-align:center;">
             <div style="font-size:13px;font-weight:600;color:var(--danger);">錯 ${data.count} 次</div>
