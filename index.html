@@ -278,6 +278,7 @@
 
     /* ── Animations ── */
     @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .animate-in { animation: fadeIn 0.3s ease both; }
   </style>
 </head>
@@ -467,12 +468,18 @@
         </div>
       </div>
 
-      <!-- 智能學習建議（核心：總評語） -->
+      <!-- 智能學習建議（AI 版總評語） -->
       <div id="ms-insight-box" style="background:linear-gradient(135deg,#EFF6FF 0%,#F0F9FF 100%);border:1px solid #BFDBFE;border-radius:var(--radius-sm);padding:18px 20px;margin-bottom:1.25rem;">
-        <div style="font-size:13px;font-weight:600;color:#1E40AF;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
-          🎯 學習總評語
+        <div style="font-size:13px;font-weight:600;color:#1E40AF;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
+          <span>✨ AI 學習總評語</span>
+          <button id="ms-ai-btn" onclick="generateAIInsight()" style="background:#1E40AF;color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+            <span id="ms-ai-btn-label">🤖 生成 AI 分析</span>
+          </button>
         </div>
-        <div id="ms-insight-content" style="font-size:13px;color:#1E3A8A;line-height:1.8;"></div>
+        <div id="ms-insight-content" style="font-size:13px;color:#1E3A8A;line-height:1.8;">
+          <div style="color:#64748B;font-style:italic;">點擊上方「生成 AI 分析」按鈕，獲得針對你作答資料的個人化建議。</div>
+        </div>
+        <div id="ms-ai-meta" style="margin-top:10px;font-size:11px;color:#64748B;display:none;"></div>
       </div>
 
       <!-- 章節熱力圖 -->
@@ -527,8 +534,9 @@
 
     <div id="question-text" class="hidden" style="font-size:15px;font-weight:500;color:var(--text);background:#F0F9FF;border-left:3px solid var(--accent);padding:10px 14px;border-radius:8px;margin-bottom:1rem;line-height:1.6;"></div>
 
-    <div class="img-box">
-      <img id="quiz-image" src="" alt="組織圖" referrerpolicy="no-referrer">
+    <div class="img-box" style="position:relative;">
+      <img id="quiz-image" src="" alt="組織圖" referrerpolicy="no-referrer" style="cursor:zoom-in;" onclick="openLightbox()">
+      <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.5);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;pointer-events:none;">🔍 點擊放大</div>
     </div>
 
     <div id="answer-area">
@@ -616,6 +624,7 @@
       <button class="teacher-tab" onclick="switchTeacherTab('t-difficulty')">難度分析</button>
       <button class="teacher-tab" onclick="switchTeacherTab('t-students')">學生排行</button>
       <button class="teacher-tab" onclick="switchTeacherTab('t-wrongs')">錯題分布</button>
+      <button class="teacher-tab" onclick="switchTeacherTab('t-trend')">作答趨勢</button>
       <button class="teacher-tab" onclick="switchTeacherTab('t-heatmap')">學習熱力</button>
       <button class="teacher-tab" onclick="switchTeacherTab('t-individual')">個別學生</button>
       <button class="teacher-tab" onclick="switchTeacherTab('t-chapters')">章節管理</button>
@@ -662,6 +671,57 @@
       </div>
     </div>
 
+    <!-- Panel: 作答趨勢 -->
+    <div id="t-trend" class="teacher-panel">
+      <!-- 統計卡片 -->
+      <div class="dash-stat-grid" style="margin-bottom:1.5rem;">
+        <div class="dash-stat">
+          <div class="dval" id="trend-total" style="color:var(--accent);">—</div>
+          <div class="dlbl">累計作答次數</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dval" id="trend-active-students" style="color:var(--success);">—</div>
+          <div class="dlbl">活躍學生數</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dval" id="trend-avg-time" style="color:var(--amber);">—</div>
+          <div class="dlbl">平均作答時長</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dval" id="trend-today" style="color:#7C3AED;">—</div>
+          <div class="dlbl">今日作答次數</div>
+        </div>
+      </div>
+
+      <!-- 趨勢圖 1：每日作答次數 -->
+      <div class="chart-wrap" style="margin-bottom:1.5rem;">
+        <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:10px;">📈 近 14 天每日作答次數</div>
+        <div style="position:relative;height:240px;">
+          <canvas id="trendCountChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 趨勢圖 2：各章節平均作答時長 -->
+      <div class="chart-wrap" style="margin-bottom:1.5rem;">
+        <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:10px;">⏱️ 各章節平均作答時長（秒）</div>
+        <div style="position:relative;height:240px;">
+          <canvas id="trendTimeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Stage 比較 -->
+      <div class="chart-wrap">
+        <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:10px;">⚖️ Stage 1 vs Stage 2 平均作答時長</div>
+        <div style="position:relative;height:180px;">
+          <canvas id="trendStageChart"></canvas>
+        </div>
+      </div>
+
+      <div id="trend-empty" style="display:none;text-align:center;padding:2rem;color:var(--muted);font-size:13px;">
+        尚無趨勢資料。學生開始作答後此處會顯示。
+      </div>
+    </div>
+
     <!-- Panel: Learning heatmap -->
     <div id="t-heatmap" class="teacher-panel">
       <div style="font-size:13px;font-weight:500;color:var(--muted);margin-bottom:12px;">學生作答時段分佈（24 小時）</div>
@@ -704,7 +764,7 @@
      SCRIPT
 ═══════════════════════════════════════ -->
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyroZJmOg7soIHpjHE79SFZw7aPw44e7lRySVgK8V6xMsZ6a8Ay25wxioJrb0Dfm5slXw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwd-ZeR8Fc7PQqOHAF542vSGRTpqGrjMMDR8dHNRroSo9FYkTiXYSpa8AEqjoPq4OG/exec";
 
 // 教師帳號清單（id 統一小寫比對）
 const TEACHER_ACCOUNTS = ["chh", "chhwang", "admin", "teacher"];
@@ -817,6 +877,7 @@ let wrongAnswers = [];
 let timerInterval;
 let timeLeft = 35;
 let isPracticeMode = false;
+let quizStartTime = 0;   // 測驗開始時間戳（毫秒）
 let overviewChartInstance = null;
 let distChartInstance = null;
 
@@ -905,6 +966,93 @@ document.addEventListener("keydown", e => {
 // 6. 禁止圖片拖曳
 document.addEventListener("dragstart", e => {
   if (isInStage2Quiz()) e.preventDefault();
+});
+
+// ─── Lightbox（圖片放大檢視，不觸發作弊偵測）─────────────────
+let lbScale = 1, lbTx = 0, lbTy = 0;
+let lbIsDragging = false, lbStartX = 0, lbStartY = 0;
+
+function openLightbox() {
+  const mainImg = document.getElementById("quiz-image");
+  const lb = document.getElementById("img-lightbox");
+  const lbImg = document.getElementById("lightbox-img");
+  if (!mainImg || !mainImg.src || !lb || !lbImg) return;
+  bindLightboxListeners();
+  lbImg.src = mainImg.src;
+  lb.classList.remove("hidden");
+  lbReset();
+}
+function closeLightbox() {
+  document.getElementById("img-lightbox").classList.add("hidden");
+}
+function lbApply() {
+  document.getElementById("lightbox-img").style.transform =
+    `translate(${lbTx}px, ${lbTy}px) scale(${lbScale})`;
+}
+function lbZoom(factor) {
+  lbScale = Math.max(0.5, Math.min(8, lbScale * factor));
+  lbApply();
+}
+function lbReset() {
+  lbScale = 1; lbTx = 0; lbTy = 0; lbApply();
+}
+
+// 滾輪縮放（只在 lightbox 內生效，且 stopPropagation 避免觸發其他事件）
+document.addEventListener("wheel", e => {
+  const lb = document.getElementById("img-lightbox");
+  if (!lb || lb.classList.contains("hidden")) return;
+  e.preventDefault();
+  e.stopPropagation();
+  lbZoom(e.deltaY < 0 ? 1.15 : 0.87);
+}, { passive: false });
+
+// 拖曳平移
+(function() {
+  const lbImg = () => document.getElementById("lightbox-img");
+  document.addEventListener("mousedown", e => {
+    const lb = document.getElementById("img-lightbox");
+    if (!lb || lb.classList.contains("hidden")) return;
+    if (e.target.id === "lightbox-img" || e.target.tagName === "IMG") {
+      lbIsDragging = true;
+      lbStartX = e.clientX - lbTx;
+      lbStartY = e.clientY - lbTy;
+      lbImg().style.cursor = "grabbing";
+    }
+  });
+  document.addEventListener("mousemove", e => {
+    if (!lbIsDragging) return;
+    lbTx = e.clientX - lbStartX;
+    lbTy = e.clientY - lbStartY;
+    lbApply();
+  });
+  document.addEventListener("mouseup", () => {
+    if (lbIsDragging) {
+      lbIsDragging = false;
+      const img = lbImg(); if (img) img.style.cursor = "grab";
+    }
+  });
+})();
+
+// 雙擊還原 / 點背景關閉（在 openLightbox 時惰性綁定，避免腳本載入時 DOM 還沒準備好）
+let lbListenersBound = false;
+function bindLightboxListeners() {
+  if (lbListenersBound) return;
+  const lb = document.getElementById("img-lightbox");
+  const lbImg = document.getElementById("lightbox-img");
+  if (!lb || !lbImg) return;
+  lbImg.addEventListener("dblclick", lbReset);
+  lb.addEventListener("click", e => {
+    if (e.target.id === "img-lightbox") closeLightbox();
+  });
+  lbListenersBound = true;
+}
+
+// ESC 關閉
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    const lb = document.getElementById("img-lightbox");
+    if (lb && !lb.classList.contains("hidden")) closeLightbox();
+  }
 });
 
 // ─── Beep ─────────────────────────────────────
@@ -1258,11 +1406,173 @@ function renderMySummary() {
     }).join("");
   }
 
-  // ── 智能學習建議（總評語）──
-  renderInsight(filtered, records, chArr, mainRecs, practiceRecs);
+  // ── 智能學習建議（總評語） ──
+  // 暫存當前篩選後的資料，供「生成 AI 分析」按鈕使用
+  msSummaryContext = { filtered, records, chArr, mainRecs, practiceRecs };
+
+  // 重置 AI 評語區（每次重新渲染時清掉舊內容）
+  resetAIInsightUI();
 }
 
-function renderInsight(filtered, allRecords, chArr, mainRecs, practiceRecs) {
+// 全域：當前總評語頁的資料快照（給 AI 按鈕用）
+let msSummaryContext = null;
+
+// 重置「✨ AI 學習總評語」UI（每次重新篩選後）
+function resetAIInsightUI() {
+  const content = document.getElementById("ms-insight-content");
+  const btn = document.getElementById("ms-ai-btn");
+  const btnLabel = document.getElementById("ms-ai-btn-label");
+  const meta = document.getElementById("ms-ai-meta");
+  if (content) content.innerHTML = `<div style="color:#64748B;font-style:italic;">點擊上方「生成 AI 分析」按鈕，獲得針對你作答資料的個人化建議。</div>`;
+  if (btn) { btn.disabled = false; btn.style.opacity = "1"; }
+  if (btnLabel) btnLabel.innerText = "🤖 生成 AI 分析";
+  if (meta) { meta.style.display = "none"; meta.innerHTML = ""; }
+}
+
+// 把當前篩選資料整理成「給 AI 看的精簡摘要」（節省 token）
+function buildAIPayload(ctx) {
+  const { filtered, chArr, mainRecs, practiceRecs } = ctx;
+  const total = filtered.length;
+  const avg = Math.round(filtered.map(r => r.score).reduce((a,b)=>a+b,0) / total);
+
+  // 章節表現（按平均分排序）
+  const chapterStats = chArr.map(c => ({
+    chapter: c.chapter,
+    avg: c.avg,
+    attempts: c.count
+  }));
+
+  // Stage 統計
+  const s1 = filtered.filter(r => r.stage === "1");
+  const s2 = filtered.filter(r => r.stage === "2");
+  const stageStats = {
+    s1Count: s1.length, s1Avg: s1.length ? Math.round(s1.reduce((a,r)=>a+r.score,0)/s1.length) : null,
+    s2Count: s2.length, s2Avg: s2.length ? Math.round(s2.reduce((a,r)=>a+r.score,0)/s2.length) : null
+  };
+
+  // 錯題練習對照
+  const mAvg = mainRecs.length ? Math.round(mainRecs.reduce((a,r)=>a+r.score,0)/mainRecs.length) : null;
+  const pAvg = practiceRecs.length ? Math.round(practiceRecs.reduce((a,r)=>a+r.score,0)/practiceRecs.length) : null;
+
+  // 違規累計
+  const violations = filtered.filter(r => r.stage === "2" && !r.isPractice)
+    .reduce((s,r) => s + (r.violations || 0), 0);
+
+  // 最近 10 次 vs 之前
+  let trendDiff = null;
+  if (filtered.length >= 10) {
+    const sorted = [...filtered].sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const recent5 = sorted.slice(-5);
+    const prev = sorted.slice(0, -5);
+    const recAvg = recent5.reduce((a,r)=>a+r.score,0)/recent5.length;
+    const prevAvg = prev.reduce((a,r)=>a+r.score,0)/prev.length;
+    trendDiff = Math.round(recAvg - prevAvg);
+  }
+
+  return {
+    totalAttempts: total, overallAvg: avg,
+    chapterStats, stageStats,
+    mainAvg: mAvg, practiceAvg: pAvg,
+    practiceCount: practiceRecs.length,
+    violations, trendDiff
+  };
+}
+
+// ✨ 生成 AI 評語：含 4 項省錢機制
+async function generateAIInsight() {
+  if (!msSummaryContext) return;
+
+  // === 省錢機制 1：每日次數限制（5 次/天/學生）===
+  const today = new Date().toISOString().slice(0, 10);
+  const usageKey = `aiInsightUsage_${currentUser}_${today}`;
+  const used = parseInt(localStorage.getItem(usageKey) || "0", 10);
+  const DAILY_LIMIT = 5;
+  if (used >= DAILY_LIMIT) {
+    showAIInsightFallback(`⚠️ 你今日的 AI 分析次數已用完（${DAILY_LIMIT} 次/天）。以下顯示模板版分析：`);
+    return;
+  }
+
+  // === 省錢機制 2：sessionStorage 快取（5 分鐘內同樣 payload 不重複呼叫）===
+  const payload = buildAIPayload(msSummaryContext);
+  const cacheKey = `aiInsight_${currentUser}_${JSON.stringify(payload).length}_${payload.totalAttempts}_${payload.overallAvg}`;
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      const obj = JSON.parse(cached);
+      if (Date.now() - obj.ts < 5 * 60 * 1000) {
+        showAIInsightContent(obj.text, "（快取結果，5 分鐘內有效）");
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // === 顯示載入動畫 ===
+  const btn = document.getElementById("ms-ai-btn");
+  const btnLabel = document.getElementById("ms-ai-btn-label");
+  const content = document.getElementById("ms-insight-content");
+  btn.disabled = true; btn.style.opacity = "0.6";
+  btnLabel.innerText = "⏳ AI 分析中…";
+  content.innerHTML = `<div style="color:#64748B;display:flex;align-items:center;gap:8px;">
+    <div style="width:14px;height:14px;border:2px solid #BFDBFE;border-top-color:#1E40AF;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+    AI 正在分析你的作答資料，約需 3-5 秒…
+  </div>`;
+
+  // === 呼叫後端 AI endpoint ===
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "aiInsight",
+        studentId: currentUser,
+        payload: payload
+      }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+    const json = await res.json();
+
+    if (json.status === "success" && json.text) {
+      // 成功 → 顯示 AI 結果 + 累計用量 + 快取
+      localStorage.setItem(usageKey, String(used + 1));
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), text: json.text }));
+      } catch(e) {}
+      showAIInsightContent(json.text, `今日已用 ${used + 1} / ${DAILY_LIMIT} 次 · 由 Claude Haiku 生成`);
+    } else {
+      // === 省錢機制 4：fallback 到模板版 ===
+      const errMsg = json.message || "未知錯誤";
+      console.warn("AI 評語失敗：", errMsg);
+      showAIInsightFallback(`⚠️ AI 分析失敗（${errMsg}），以下顯示模板版分析：`);
+    }
+  } catch (err) {
+    console.error("AI 評語呼叫失敗：", err);
+    showAIInsightFallback(`⚠️ 網路錯誤（${err.message || err}），以下顯示模板版分析：`);
+  } finally {
+    btn.disabled = false; btn.style.opacity = "1";
+    btnLabel.innerText = "🔄 重新生成";
+  }
+}
+
+// 顯示 AI 結果
+function showAIInsightContent(text, metaText) {
+  const content = document.getElementById("ms-insight-content");
+  const meta = document.getElementById("ms-ai-meta");
+  // 簡單把換行轉成 <br>，並把 **粗體** 處理
+  let html = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/\n/g, "<br>");
+  content.innerHTML = html;
+  if (meta && metaText) { meta.innerHTML = metaText; meta.style.display = "block"; }
+}
+
+// fallback：回到原模板邏輯
+function showAIInsightFallback(prefixMsg) {
+  const ctx = msSummaryContext;
+  if (!ctx) return;
+  renderFallbackInsight(ctx.filtered, ctx.records, ctx.chArr, ctx.mainRecs, ctx.practiceRecs, prefixMsg);
+  const meta = document.getElementById("ms-ai-meta");
+  if (meta) { meta.innerHTML = "（fallback 模板）"; meta.style.display = "block"; }
+}
+
+function renderFallbackInsight(filtered, allRecords, chArr, mainRecs, practiceRecs, prefixMsg) {
   const lines = [];
   const total = filtered.length;
   const avg = Math.round(filtered.map(r => r.score).reduce((a,b)=>a+b,0) / total);
@@ -1275,7 +1585,7 @@ function renderInsight(filtered, allRecords, chArr, mainRecs, practiceRecs) {
   else if (avg >= 40) lines.push(`📚 你的平均分 <strong>${avg}</strong> 分，需要更多投入。建議從 Stage 1（選擇題）打底。`);
   else lines.push(`🌱 你的平均分 <strong>${avg}</strong> 分，別氣餒！從基礎章節開始，逐章鞏固。`);
 
-  // 2. 薄弱章節提醒（取 < 60 分的）
+  // 2. 薄弱章節提醒
   const weakChapters = chArr.filter(c => c.avg < 60).map(c => c.chapter);
   if (weakChapters.length > 0) {
     lines.push(`📌 <strong>${weakChapters.join("、")}</strong> 等章節平均分偏低，建議優先複習解析。`);
@@ -1293,14 +1603,14 @@ function renderInsight(filtered, allRecords, chArr, mainRecs, practiceRecs) {
     lines.push(`💡 你尚未使用「錯題練習」功能。完成測驗後，結算頁有「再戰錯題」按鈕，能針對性提升弱點。`);
   }
 
-  // 4. 違規提醒（Stage 2）
+  // 4. 違規提醒
   const violationTotal = filtered.filter(r => r.stage === "2" && !r.isPractice)
     .reduce((sum, r) => sum + (r.violations || 0), 0);
   if (violationTotal >= 3) {
     lines.push(`⚠️ Stage 2 跑考累計觸發違規 <strong style="color:var(--danger);">${violationTotal}</strong> 次，請留意作答誠信規範。`);
   }
 
-  // 5. 進步趨勢（最近 10 次 vs 之前）
+  // 5. 進步趨勢
   if (filtered.length >= 10) {
     const sorted = [...filtered].sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
     const recent10 = sorted.slice(-5);
@@ -1312,7 +1622,8 @@ function renderInsight(filtered, allRecords, chArr, mainRecs, practiceRecs) {
     else if (trendDiff <= -8) lines.push(`📉 最近 5 次平均比之前低 <strong style="color:var(--danger);">${trendDiff}</strong> 分，建議放慢腳步穩固基礎。`);
   }
 
-  document.getElementById("ms-insight-content").innerHTML = lines.join("<br><br>");
+  const prefix = prefixMsg ? `<div style="color:var(--amber);margin-bottom:8px;font-size:12px;">${prefixMsg}</div>` : "";
+  document.getElementById("ms-insight-content").innerHTML = prefix + lines.join("<br><br>");
 }
 
 // ─── Quiz utilities (洗牌、答案標準化、選項挑選、圖片預載) ──────
@@ -1367,10 +1678,16 @@ function stripPlural(s) {
 // - 羅馬數字轉阿拉伯數字
 function normalizeAns(s) {
   let t = normalizeRomans(String(s || "")).toLowerCase();
-  // 移除所有空白
-  t = t.replace(/\s+/g, "");
-  // 移除連字號、底線、逗號、句點、全形空白
-  t = t.replace(/[\-_,.\u3000]/g, "");
+  // 移除所有空白（含全形空白、不換行空白、tab、換行）
+  t = t.replace(/[\s\u3000\u00A0]+/g, "");
+  // 移除符號類（用 Unicode escape 明確指定，避免字元編碼造成的漏掉）：
+  //   \u0027 直單引號 '       \u0060 反引號 `
+  //   \u2018 左彎單引號 '     \u2019 右彎單引號 '   \u02BC 修飾撇號 ʼ
+  //   \u0022 直雙引號 "       \u201C 左彎雙引號 "   \u201D 右彎雙引號 "
+  //   \u2013 短破折號 –       \u2014 長破折號 —
+  //   \uFF08 全形 (           \uFF09 全形 )
+  //   \uFF0C 全形逗號 ，      \u3002 全形句號 。
+  t = t.replace(/[\-_,.;:!?()\[\]{}\u0027\u0060\u2018\u2019\u02BC\u0022\u201C\u201D\u2013\u2014\uFF08\uFF09\uFF0C\u3002]/g, "");
   // 處理單複數：對整體做去複數
   t = stripPlural(t);
   return t;
@@ -1618,6 +1935,7 @@ async function startQuiz() {
     quizData = shuffleArray(formatted);
     isPracticeMode = false;
     violationCount = 0;  // 新測驗開始 → 重置違規計數
+    quizStartTime = Date.now();  // 記錄測驗開始時間（用於計算總作答時長）
 
     // 預載前 5 張圖片，避免 quiz 開始時等待
     preloadImages(quizData.slice(0, 5));
@@ -1869,6 +2187,9 @@ function endQuiz() {
     .filter(Boolean)
     .join(",");
 
+  // 計算總作答時長（秒）。錯題練習不算入時長分析
+  const durationSec = quizStartTime > 0 ? Math.round((Date.now() - quizStartTime) / 1000) : 0;
+
   fetch(SCRIPT_URL, {
     method: "POST",
     body: JSON.stringify({
@@ -1879,7 +2200,8 @@ function endQuiz() {
       score: finalScore,
       wrongImgs: wrongImgs,
       violations: violationCount,
-      isPractice: isPracticeMode  // 新增：true = 錯題練習，false = 主測驗
+      isPractice: isPracticeMode,  // true = 錯題練習，false = 主測驗
+      duration: durationSec         // 新增：總作答時長（秒）
     }),
     headers: { "Content-Type": "text/plain;charset=utf-8" }
   });
@@ -1893,6 +2215,7 @@ function practiceWrongAnswers() {
     .filter(Boolean);
   quizData = shuffleArray(wrongQuestions);
   isPracticeMode = true;
+  quizStartTime = Date.now();   // 錯題練習也記錄開始時間
   document.getElementById("result-section").classList.add("hidden");
   document.getElementById("quiz-section").classList.remove("hidden");
   setupModeUI();
@@ -1924,8 +2247,8 @@ async function loadTeacherData() {
     const json = await res.json();
     if (json.status !== "success") return;
 
-    // 欄位：[Timestamp, Student ID, Chapter, Stage, Score, WrongImgs, Violations, IsPractice]
-    // 兼容：缺欄位視為主測驗（IsPractice = false）
+    // 欄位：[Timestamp, Student ID, Chapter, Stage, Score, WrongImgs, Violations, IsPractice, Duration]
+    // 兼容：缺欄位視為主測驗（IsPractice = false）、缺時長視為 0
     const allRows = json.data.slice(1).map(r => ({
       ts: r[0],
       id: String(r[1]).trim(),
@@ -1934,7 +2257,8 @@ async function loadTeacherData() {
       score: Number(r[4]) || 0,
       wrongImgs: r.length > 5 ? String(r[5] || "").split(",").filter(Boolean) : [],
       violations: r.length > 6 ? Number(r[6]) || 0 : 0,
-      isPractice: r.length > 7 ? String(r[7] || "").trim().toUpperCase() === "TRUE" : false
+      isPractice: r.length > 7 ? String(r[7] || "").trim().toUpperCase() === "TRUE" : false,
+      duration: r.length > 8 ? Number(r[8]) || 0 : 0   // 新增：作答時長（秒）
     }));
 
     // 教師後台只看主測驗，避免錯題練習污染班級統計
@@ -2282,8 +2606,161 @@ function calcStreak(rows) {
 
   // 渲染新增分析
   renderWrongQuestions(rows);
+  renderTrend(rows);
   renderHeatmap(rows);
   buildIndividualSelector(students);
+}
+
+// ─── 作答趨勢（次數 + 平均時長）──────────────
+let trendCountChart = null, trendTimeChart = null, trendStageChart = null;
+
+function renderTrend(rows) {
+  const empty = document.getElementById("trend-empty");
+  if (rows.length === 0) {
+    if (empty) empty.style.display = "block";
+    return;
+  }
+  if (empty) empty.style.display = "none";
+
+  // ─ 統計卡 ─
+  const totalAttempts = rows.length;
+  const activeStudents = new Set(rows.map(r => r.id)).size;
+  const withDuration = rows.filter(r => r.duration > 0);
+  const avgTime = withDuration.length
+    ? Math.round(withDuration.reduce((s, r) => s + r.duration, 0) / withDuration.length)
+    : 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayCount = rows.filter(r => new Date(r.ts) >= today).length;
+
+  document.getElementById("trend-total").innerText = totalAttempts;
+  document.getElementById("trend-active-students").innerText = activeStudents;
+  document.getElementById("trend-avg-time").innerText = avgTime > 0 ? formatDuration(avgTime) : "—";
+  document.getElementById("trend-today").innerText = todayCount;
+
+  // ─ 圖 1：近 14 天每日作答次數 ─
+  const dayLabels = [];
+  const dayCounts = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - i);
+    const dStr = `${d.getMonth()+1}/${d.getDate()}`;
+    dayLabels.push(dStr);
+    const next = new Date(d); next.setDate(next.getDate() + 1);
+    dayCounts.push(rows.filter(r => {
+      const ts = new Date(r.ts);
+      return ts >= d && ts < next;
+    }).length);
+  }
+  if (trendCountChart) trendCountChart.destroy();
+  trendCountChart = new Chart(document.getElementById("trendCountChart").getContext("2d"), {
+    type: "line",
+    data: {
+      labels: dayLabels,
+      datasets: [{
+        label: "作答次數",
+        data: dayCounts,
+        borderColor: "#2563EB",
+        backgroundColor: "rgba(37,99,235,0.1)",
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: "#2563EB"
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  // ─ 圖 2：各章節平均作答時長 ─
+  const chapMap = {};
+  withDuration.forEach(r => {
+    if (!chapMap[r.chapter]) chapMap[r.chapter] = [];
+    chapMap[r.chapter].push(r.duration);
+  });
+  const chapArr = Object.entries(chapMap).map(([ch, arr]) => ({
+    chapter: ch,
+    avgTime: Math.round(arr.reduce((a,b)=>a+b,0) / arr.length),
+    count: arr.length
+  })).sort((a,b) => b.avgTime - a.avgTime);
+
+  if (trendTimeChart) trendTimeChart.destroy();
+  if (chapArr.length > 0) {
+    trendTimeChart = new Chart(document.getElementById("trendTimeChart").getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: chapArr.map(c => c.chapter),
+        datasets: [{
+          label: "平均作答時長（秒）",
+          data: chapArr.map(c => c.avgTime),
+          backgroundColor: "rgba(217,119,6,0.7)",
+          borderColor: "#D97706",
+          borderWidth: 1,
+          borderRadius: 4
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.parsed.x} 秒（${formatDuration(ctx.parsed.x)}）·  ${chapArr[ctx.dataIndex].count} 次`
+            }
+          }
+        },
+        scales: { x: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // ─ 圖 3：Stage 1 vs Stage 2 平均時長 ─
+  const s1 = withDuration.filter(r => r.stage === "1");
+  const s2 = withDuration.filter(r => r.stage === "2");
+  const s1Avg = s1.length ? Math.round(s1.reduce((s,r)=>s+r.duration,0) / s1.length) : 0;
+  const s2Avg = s2.length ? Math.round(s2.reduce((s,r)=>s+r.duration,0) / s2.length) : 0;
+
+  if (trendStageChart) trendStageChart.destroy();
+  trendStageChart = new Chart(document.getElementById("trendStageChart").getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: ["Stage 1 (選擇題)", "Stage 2 (跑考)"],
+      datasets: [{
+        label: "平均時長（秒）",
+        data: [s1Avg, s2Avg],
+        backgroundColor: ["rgba(37,99,235,0.7)", "rgba(5,150,105,0.7)"],
+        borderColor: ["#2563EB", "#059669"],
+        borderWidth: 1, borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.parsed.y} 秒（${formatDuration(ctx.parsed.y)}）`
+          }
+        }
+      },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+// 將秒數格式化為 "M:SS" 或 "Xs"
+function formatDuration(sec) {
+  if (!sec || sec < 0) return "—";
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}m ${s}s`;
 }
 
 // ─── 1. 錯題分布 ─────────────────────────────
@@ -2523,5 +3000,26 @@ function renderIndividual() {
   contentEl.innerHTML = html;
 }
 </script>
+
+<!-- Lightbox：圖片放大檢視（位於 body 最底層，確保 z-index 不被遮蔽）-->
+<div id="img-lightbox" class="hidden" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;">
+  <div style="position:absolute;top:16px;left:16px;color:#fff;font-size:12px;background:rgba(255,255,255,0.15);padding:6px 12px;border-radius:20px;">
+    🖱️ 滾輪縮放 · 拖曳移動 · 雙擊還原
+  </div>
+  <button onclick="closeLightbox()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;z-index:1;">✕</button>
+  <div style="position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:1;">
+    <button onclick="lbZoom(1.25)" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;">＋</button>
+    <button onclick="lbZoom(0.8)" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;">－</button>
+    <button onclick="lbReset()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:14px;cursor:pointer;">⟲</button>
+  </div>
+  <img id="lightbox-img" src="" alt="放大檢視" referrerpolicy="no-referrer"
+       style="max-width:90vw;max-height:90vh;transform-origin:center center;transition:transform 0.1s;user-select:none;-webkit-user-drag:none;cursor:grab;">
+</div>
+
+<style>
+  #img-lightbox.hidden { display: none !important; }
+  #img-lightbox:not(.hidden) { display: flex !important; }
+</style>
+
 </body>
 </html>
