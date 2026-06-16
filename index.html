@@ -534,9 +534,9 @@
 
     <div id="question-text" class="hidden" style="font-size:15px;font-weight:500;color:var(--text);background:#F0F9FF;border-left:3px solid var(--accent);padding:10px 14px;border-radius:8px;margin-bottom:1rem;line-height:1.6;"></div>
 
-    <div class="img-box" style="position:relative;">
-      <img id="quiz-image" src="" alt="組織圖" referrerpolicy="no-referrer" style="cursor:zoom-in;" onclick="openLightbox()">
-      <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.5);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;pointer-events:none;">🔍 點擊放大</div>
+    <div class="img-box" style="position:relative;cursor:zoom-in;" onclick="openLightbox()">
+      <img id="quiz-image" src="" alt="組織圖" referrerpolicy="no-referrer" style="cursor:zoom-in;width:100%;pointer-events:none;">
+      <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;pointer-events:none;z-index:2;">🔍 點擊放大</div>
     </div>
 
     <div id="answer-area">
@@ -1431,16 +1431,28 @@ function resetAIInsightUI() {
 
 // 把當前篩選資料整理成「給 AI 看的精簡摘要」（節省 token）
 function buildAIPayload(ctx) {
-  const { filtered, chArr, mainRecs, practiceRecs } = ctx;
+  const { filtered, records, chArr, mainRecs, practiceRecs } = ctx;
   const total = filtered.length;
   const avg = Math.round(filtered.map(r => r.score).reduce((a,b)=>a+b,0) / total);
 
-  // 章節表現（按平均分排序）
+  // 當前篩選範圍的章節表現
   const chapterStats = chArr.map(c => ({
     chapter: c.chapter,
     avg: c.avg,
     attempts: c.count
   }));
+
+  // 「跨章節對比」：所有作答資料（不只篩選後的）
+  const allChapMap = {};
+  records.forEach(r => {
+    if (!allChapMap[r.chapter]) allChapMap[r.chapter] = [];
+    allChapMap[r.chapter].push(r.score);
+  });
+  const allChapterStats = Object.entries(allChapMap).map(([ch, arr]) => ({
+    chapter: ch,
+    avg: Math.round(arr.reduce((a,b)=>a+b,0) / arr.length),
+    attempts: arr.length
+  })).sort((a,b) => b.avg - a.avg);
 
   // Stage 統計
   const s1 = filtered.filter(r => r.stage === "1");
@@ -1458,7 +1470,7 @@ function buildAIPayload(ctx) {
   const violations = filtered.filter(r => r.stage === "2" && !r.isPractice)
     .reduce((s,r) => s + (r.violations || 0), 0);
 
-  // 最近 10 次 vs 之前
+  // 最近 5 次 vs 之前
   let trendDiff = null;
   if (filtered.length >= 10) {
     const sorted = [...filtered].sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -1469,12 +1481,33 @@ function buildAIPayload(ctx) {
     trendDiff = Math.round(recAvg - prevAvg);
   }
 
+  // 實際答錯的構造名稱（從 localStorage 累積的最近 50 筆中,取頻率最高的前 8 個）
+  let wrongTermsTop = [];
+  try {
+    const wrongHistory = JSON.parse(localStorage.getItem(`wrongHistory_${currentUser}`) || "[]");
+    const counter = {};
+    wrongHistory.forEach(w => {
+      const key = w.correctAns;
+      if (!key) return;
+      if (!counter[key]) counter[key] = { term: key, count: 0, chapters: new Set() };
+      counter[key].count++;
+      counter[key].chapters.add(w.chapter);
+    });
+    wrongTermsTop = Object.values(counter)
+      .sort((a,b) => b.count - a.count)
+      .slice(0, 8)
+      .map(t => ({ term: t.term, count: t.count, chapters: [...t.chapters] }));
+  } catch(e) {}
+
   return {
     totalAttempts: total, overallAvg: avg,
-    chapterStats, stageStats,
+    chapterStats,        // 篩選範圍內的
+    allChapterStats,     // 全部章節（跨章節比較用）
+    stageStats,
     mainAvg: mAvg, practiceAvg: pAvg,
     practiceCount: practiceRecs.length,
-    violations, trendDiff
+    violations, trendDiff,
+    wrongTermsTop        // 新增：學生實際最常答錯的構造名稱
   };
 }
 
@@ -1536,7 +1569,7 @@ async function generateAIInsight() {
       try {
         sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), text: json.text }));
       } catch(e) {}
-      showAIInsightContent(json.text, `今日已用 ${used + 1} / ${DAILY_LIMIT} 次 · 由 Claude Haiku 生成`);
+      showAIInsightContent(json.text, `今日已用 ${used + 1} / ${DAILY_LIMIT} 次 · 由 AI 生成`);
     } else {
       // === 省錢機制 4：fallback 到模板版 ===
       const errMsg = json.message || "未知錯誤";
@@ -1556,11 +1589,76 @@ async function generateAIInsight() {
 function showAIInsightContent(text, metaText) {
   const content = document.getElementById("ms-insight-content");
   const meta = document.getElementById("ms-ai-meta");
-  // 簡單把換行轉成 <br>，並把 **粗體** 處理
-  let html = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/\n/g, "<br>");
-  content.innerHTML = html;
+
+  // 處理 markdown
+  let html = text
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")    // **粗體**
+    .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");  // *斜體*
+
+  // 段落：兩個換行 → </p><p>；單個換行 → <br>
+  html = html.split(/\n\n+/).map(p => `<p style="margin:0 0 10px;">${p.replace(/\n/g, "<br>")}</p>`).join("");
+
+  // 隨機 ID 給這次評語，給回饋按鈕識別
+  const insightId = "ins_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+
+  content.innerHTML = `
+    ${html}
+    <div id="ms-feedback-${insightId}" style="margin-top:14px;padding-top:12px;border-top:1px dashed #BFDBFE;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:#1E40AF;">這則建議對你有幫助嗎？</span>
+      <button onclick="rateInsight('${insightId}', 'up')" class="ms-rate-btn" data-rate="up"
+              style="background:#fff;border:1.5px solid #BFDBFE;color:#1E40AF;padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+        👍 有幫助
+      </button>
+      <button onclick="rateInsight('${insightId}', 'down')" class="ms-rate-btn" data-rate="down"
+              style="background:#fff;border:1.5px solid #BFDBFE;color:#1E40AF;padding:4px 12px;border-radius:16px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+        👎 沒幫助
+      </button>
+      <span id="ms-rate-msg-${insightId}" style="font-size:11px;color:#059669;display:none;">✓ 感謝你的回饋</span>
+    </div>
+  `;
+
+  // 記錄這次 insight 內容供回饋時送出
+  window._lastInsight = { id: insightId, text: text, ts: Date.now() };
+
   if (meta && metaText) { meta.innerHTML = metaText; meta.style.display = "block"; }
+}
+
+// 學生對 AI 評語的評分回饋
+async function rateInsight(insightId, rating) {
+  const fbBox = document.getElementById(`ms-feedback-${insightId}`);
+  if (!fbBox) return;
+
+  // 視覺反饋：被點擊的按鈕高亮
+  fbBox.querySelectorAll(".ms-rate-btn").forEach(b => {
+    b.style.opacity = "0.4";
+    b.disabled = true;
+  });
+  const clicked = fbBox.querySelector(`.ms-rate-btn[data-rate="${rating}"]`);
+  if (clicked) {
+    clicked.style.opacity = "1";
+    clicked.style.background = rating === "up" ? "#D1FAE5" : "#FEE2E2";
+    clicked.style.borderColor = rating === "up" ? "#059669" : "#DC2626";
+    clicked.style.color = rating === "up" ? "#065F46" : "#991B1B";
+  }
+  const msg = document.getElementById(`ms-rate-msg-${insightId}`);
+  if (msg) msg.style.display = "inline";
+
+  // 送回後端記錄
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "rateInsight",
+        studentId: currentUser,
+        rating: rating,
+        insightText: (window._lastInsight && window._lastInsight.text || "").slice(0, 1000),
+        ts: new Date().toISOString()
+      }),
+      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    });
+  } catch(e) {
+    console.warn("評分送出失敗:", e);
+  }
 }
 
 // fallback：回到原模板邏輯
@@ -2100,6 +2198,24 @@ function endQuiz() {
   document.body.classList.remove("stage2-active");
   document.getElementById("quiz-section").classList.add("hidden");
   document.getElementById("result-section").classList.remove("hidden");
+
+  // 累積錯題到 localStorage（最近 50 筆），供「我的作答總評語」AI 分析具體弱點
+  try {
+    const key = `wrongHistory_${currentUser}`;
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    const newWrongs = wrongAnswers
+      .filter(w => !w.isCorrect)
+      .map(w => ({
+        chapter: currentChapter,
+        stage: currentMode,
+        correctAns: String(w.correctAns || "").split(/[\/\uFF0F]/)[0].trim(),  // 取第一個正解
+        studentAns: w.studentAns || "",
+        ts: Date.now(),
+        isPractice: isPracticeMode
+      }));
+    const merged = [...newWrongs, ...existing].slice(0, 50);  // 新的在前
+    localStorage.setItem(key, JSON.stringify(merged));
+  } catch(e) {}
 
   const finalScore = Math.round(score);
   const ring = document.getElementById("score-ring");
