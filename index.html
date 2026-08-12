@@ -279,8 +279,253 @@
     /* ── Animations ── */
     @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); } 50% { box-shadow: 0 0 0 8px rgba(139, 92, 246, 0); } }
     .animate-in { animation: fadeIn 0.3s ease both; }
+
+    /* ── Dashboard v2（參考圖風格） ── */
+    :root {
+      --purple: #8B5CF6;
+      --purple-dark: #7C3AED;
+      --purple-light: #EDE9FE;
+      --purple-glow: rgba(139, 92, 246, 0.15);
+    }
+    .dash-v2 {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px 16px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    /* 頂部問候列 */
+    .dash-v2 .greet-bar {
+      background: var(--surface);
+      border-radius: 18px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .dash-v2 .greet-name { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .dash-v2 .greet-dept { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .dash-v2 .greet-logout {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .dash-v2 .greet-logout:hover { background: var(--bg); }
+
+    /* 本週學習區塊 */
+    .week-streak {
+      background: linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 60%, #FEF3C7 100%);
+      border-radius: 20px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 6px rgba(251, 191, 36, 0.15);
+    }
+    .week-streak .fire-emoji {
+      font-size: 38px;
+      flex-shrink: 0;
+      animation: float 2.4s ease-in-out infinite;
+    }
+    .week-streak .week-text { font-size: 13px; color: #78350F; font-weight: 500; }
+    .week-streak .week-text strong { font-size: 18px; color: #92400E; font-weight: 700; margin: 0 2px; }
+    .week-dots {
+      display: flex;
+      gap: 5px;
+      margin-top: 6px;
+    }
+    .week-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #B45309;
+      font-weight: 600;
+      position: relative;
+    }
+    .week-dot.done {
+      background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+      color: #fff;
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.4);
+    }
+    .week-dot.today::after {
+      content: "";
+      position: absolute;
+      bottom: -7px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 4px solid #92400E;
+    }
+
+    /* 主操作卡片 */
+    .main-action-card {
+      background: var(--surface);
+      border-radius: 24px;
+      padding: 22px 20px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      position: relative;
+      overflow: hidden;
+    }
+    .main-action-card::before {
+      content: "";
+      position: absolute;
+      top: -40px; right: -40px;
+      width: 120px; height: 120px;
+      background: radial-gradient(circle, var(--purple-light), transparent);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .hero-illustration {
+      text-align: center;
+      font-size: 48px;
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 2px 4px rgba(139, 92, 246, 0.15));
+      animation: float 3.5s ease-in-out infinite;
+    }
+    .hero-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .hero-stats {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .hero-stats strong { color: var(--purple); font-weight: 600; }
+
+    .dash-field {
+      margin-bottom: 12px;
+    }
+    .dash-field-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .dash-field select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .dash-field select:focus { border-color: var(--purple); background: var(--surface); }
+
+    .start-btn-v2 {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      margin-top: 6px;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+      transition: transform 0.1s, box-shadow 0.15s;
+      animation: pulse-glow 2.5s ease-in-out infinite;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .start-btn-v2:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4); }
+    .start-btn-v2:active { transform: translateY(0); }
+
+    /* 學習資訊（分類圓點） */
+    .study-info-card {
+      background: var(--surface);
+      border-radius: 18px;
+      padding: 14px 18px;
+    }
+    .study-info-header {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .study-info-dots {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .study-info-dots span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .study-info-dots span::before {
+      content: "";
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .study-info-dots .dot-epi { color: #2563EB; }
+    .study-info-dots .dot-conn { color: #8B5CF6; }
+    .study-info-dots .dot-musc { color: #10B981; }
+    .study-info-dots .dot-nerv { color: #F59E0B; }
+    .study-info-dots .dot-org { color: #EC4899; }
+
+    /* 次要按鈕（總評語） */
+    .secondary-action-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--surface);
+      border: 1.5px solid var(--purple-light);
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--purple-dark);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .secondary-action-btn:hover { background: var(--purple-light); }
   </style>
+<!-- Firebase SDK v10（compat 版本以直接在傳統 script 內使用）-->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
 </head>
 <body>
 
@@ -299,6 +544,16 @@
     <div class="field">
       <label>學號 / 姓名</label>
       <input type="text" id="student-id-input" placeholder="請輸入您的學號或姓名" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>科系</label>
+      <select id="department-input" style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;background:var(--surface);color:var(--text);">
+        <option value="">請選擇科系…</option>
+        <option value="醫學系">醫學系</option>
+        <option value="牙醫系">牙醫系</option>
+        <option value="醫技系">醫技系</option>
+        <option value="研究生">研究生</option>
+      </select>
     </div>
     <div class="field">
       <label>密碼</label>
@@ -347,47 +602,91 @@
 <!-- ═══════════════════════════════════════
      STUDENT DASHBOARD
 ═══════════════════════════════════════ -->
-<div id="dashboard-section" class="page hidden">
-  <div class="card card-md animate-in">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
+<div id="dashboard-section" class="page hidden" style="background:var(--bg);min-height:100vh;padding:0;">
+  <div class="dash-v2 animate-in">
+
+    <!-- 頂部問候列 -->
+    <div class="greet-bar">
       <div>
-        <div style="font-size:13px;color:var(--muted);margin-bottom:2px;">歡迎回來，</div>
-        <div id="display-student-id" style="font-size:22px;font-weight:600;"></div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">歡迎回來</div>
+        <div id="display-student-id" class="greet-name"></div>
+        <div id="display-department" class="greet-dept"></div>
       </div>
-      <button class="btn btn-ghost" onclick="performLogout()" style="padding:8px 14px;font-size:13px;">登出</button>
+      <button class="greet-logout" onclick="performLogout()">登出</button>
     </div>
 
-    <!-- Personal stats row -->
-    <div class="stat-row" id="personal-stats" style="display:none;">
-      <div class="stat-box">
-        <div class="val" id="stat-attempts" style="color:var(--accent);">—</div>
-        <div class="lbl">總測驗次數</div>
-      </div>
-      <div class="stat-box">
-        <div class="val" id="stat-best" style="color:var(--success);">—</div>
-        <div class="lbl">最高分 (Stage 2)</div>
+    <!-- 本週學習區塊 -->
+    <div class="week-streak">
+      <div class="fire-emoji">🔥</div>
+      <div style="flex:1;">
+        <div class="week-text">本週學習 <strong id="week-active-days">0</strong> 天</div>
+        <div class="week-dots" id="week-dots">
+          <div class="week-dot">一</div>
+          <div class="week-dot">二</div>
+          <div class="week-dot">三</div>
+          <div class="week-dot">四</div>
+          <div class="week-dot">五</div>
+          <div class="week-dot">六</div>
+          <div class="week-dot">日</div>
+        </div>
       </div>
     </div>
 
-    <button id="my-summary-btn" class="btn btn-ghost" onclick="openMySummary()" style="display:none;width:100%;margin-bottom:1rem;padding:11px;font-size:13px;border:1.5px solid var(--accent);color:var(--accent);background:var(--accent-light);">
+    <!-- 學習行程提醒（依考試行程，沿用舊邏輯）-->
+    <div id="study-hint-dashboard" style="display:none;padding:14px 16px;background:linear-gradient(135deg,#FEF3C7 0%,#FFFBEB 100%);border:1px solid #FCD34D;border-radius:18px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#92400E;margin-bottom:8px;">
+        📅 學習行程提醒
+      </div>
+      <div id="study-hint-dashboard-content" style="font-size:13px;color:#78350F;line-height:1.7;"></div>
+    </div>
+
+    <!-- 主操作卡片 -->
+    <div class="main-action-card">
+      <div class="hero-illustration">🔬 📚 🧬</div>
+      <div class="hero-title">組織學測驗</div>
+      <div class="hero-stats" id="hero-stats-line">
+        累計測驗 <strong id="stat-attempts">—</strong> 次 · Stage 2 最高 <strong id="stat-best">—</strong>
+      </div>
+
+      <div class="dash-field">
+        <div class="dash-field-label">📌 選擇單元章節</div>
+        <select id="chapter-select"></select>
+      </div>
+
+      <div class="dash-field">
+        <div class="dash-field-label">🎯 選擇學習階段</div>
+        <select id="stage-select">
+          <option value="1">Stage 1 ── 記憶模式（選擇題測驗）</option>
+          <option value="2">Stage 2 ── 測驗模式（35s 跑考練習）</option>
+        </select>
+      </div>
+
+      <button id="start-btn" class="start-btn-v2" onclick="startQuiz()">
+        🚀 開始測驗
+      </button>
+      <div id="start-error" style="display:none;margin-top:10px;padding:10px 12px;background:var(--danger-light);color:var(--danger);font-size:12px;border-radius:10px;text-align:center;line-height:1.5;"></div>
+    </div>
+
+    <!-- 我的作答總評語按鈕 -->
+    <button id="my-summary-btn" class="secondary-action-btn" onclick="openMySummary()" style="display:none;">
       📊 查看我的作答總評語
     </button>
 
-    <div class="field">
-      <div class="section-label">📌 選擇單元章節</div>
-      <select id="chapter-select"></select>
+    <!-- 學習資訊（章節分類圓點） -->
+    <div class="study-info-card">
+      <div class="study-info-header">📊 學習資訊</div>
+      <div class="study-info-dots">
+        <span class="dot-epi">上皮</span>
+        <span class="dot-conn">結締</span>
+        <span class="dot-musc">肌肉</span>
+        <span class="dot-nerv">神經</span>
+        <span class="dot-org">器官系統</span>
+      </div>
     </div>
 
-    <div class="field">
-      <div class="section-label">🎯 選擇學習階段</div>
-      <select id="stage-select">
-        <option value="1">Stage 1 ── 記憶模式（選擇題測驗）</option>
-        <option value="2">Stage 2 ── 測驗模式（35s 跑考練習）</option>
-      </select>
-    </div>
+    <!-- 隱藏的舊 personal-stats div（保留以避免登出時 getElementById 報錯）-->
+    <div id="personal-stats" style="display:none;"></div>
 
-    <button id="start-btn" class="btn btn-success" onclick="startQuiz()">開始載入</button>
-    <div id="start-error" style="display:none;margin-top:10px;padding:10px 12px;background:var(--danger-light);color:var(--danger);font-size:12px;border-radius:8px;text-align:center;line-height:1.5;"></div>
   </div>
 </div>
 
@@ -569,6 +868,14 @@
     <p id="summary-comment" class="hidden" style="font-size:15px;font-weight:500;color:var(--amber);margin-bottom:1rem;"></p>
     <div id="violation-notice" class="hidden" style="background:#FEF2F2;border:1px solid #FCA5A5;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:13px;color:#991B1B;"></div>
 
+    <!-- 學習建議（依考試行程）：結算頁版 -->
+    <div id="study-hint-result" style="display:none;margin-bottom:1rem;padding:12px 14px;background:linear-gradient(135deg,#FEF3C7 0%,#FFFBEB 100%);border:1px solid #FCD34D;border-radius:10px;text-align:left;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#92400E;margin-bottom:6px;">
+        📅 下一步建議
+      </div>
+      <div id="study-hint-result-content" style="font-size:13px;color:#78350F;line-height:1.6;"></div>
+    </div>
+
     <div id="wrong-answers-container" class="hidden" style="text-align:left;max-height:420px;overflow-y:auto;margin-bottom:1rem;">
       <div style="font-size:14px;font-weight:600;color:var(--danger);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">錯題與解析回顧</div>
       <div id="wrong-answers-list"></div>
@@ -628,6 +935,7 @@
       <button class="teacher-tab" onclick="switchTeacherTab('t-heatmap')">學習熱力</button>
       <button class="teacher-tab" onclick="switchTeacherTab('t-individual')">個別學生</button>
       <button class="teacher-tab" onclick="switchTeacherTab('t-chapters')">章節管理</button>
+      <button class="teacher-tab" onclick="switchTeacherTab('t-exam')">考試行程</button>
     </div>
 
     <!-- Panel: Overview -->
@@ -757,6 +1065,52 @@
       </div>
       <div id="chapter-mgmt-list"></div>
     </div>
+
+    <!-- Panel: 考試行程管理 -->
+    <div id="t-exam" class="teacher-panel">
+      <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:10px 14px;margin-bottom:1rem;">
+        <p style="font-size:12px;color:#1E40AF;line-height:1.6;">
+          💡 為每個科系建立考試行程，學生登入後會自動看到「📅 距離考試 X 天 · 範圍內你還沒練過 OOO」的提醒。允許同科系建立多筆考試（期中、期末、OSCE...）。
+        </p>
+      </div>
+
+      <!-- 新增表單 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:1.25rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">➕ 新增考試</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
+          <div>
+            <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px;">科系</label>
+            <select id="exam-dept" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);">
+              <option value="醫學系">醫學系</option>
+              <option value="牙醫系">牙醫系</option>
+              <option value="醫技系">醫技系</option>
+              <option value="研究生">研究生</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px;">考試名稱</label>
+            <input id="exam-name" type="text" placeholder="例：期末考、OSCE" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);">
+          </div>
+          <div>
+            <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px;">考試日期</label>
+            <input id="exam-date" type="date" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);">
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px;">考試範圍（章節，多個用逗號分隔）</label>
+          <textarea id="exam-scope" rows="2" placeholder="例：Urinary System, Endocrine System, Respiratory System" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--surface);resize:vertical;"></textarea>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">章節名稱要跟左下角 Sheet 分頁完全相同（大小寫敏感）</div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px;padding:8px 18px;font-size:13px;" onclick="addExamSchedule()">儲存考試</button>
+      </div>
+
+      <!-- 現有清單 -->
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;">📋 目前的考試行程</div>
+      <div id="exam-list"></div>
+      <div id="exam-empty" style="display:none;text-align:center;padding:2rem;color:var(--muted);font-size:13px;">
+        尚無任何考試行程
+      </div>
+    </div>
   </div>
 </div>
 
@@ -764,7 +1118,155 @@
      SCRIPT
 ═══════════════════════════════════════ -->
 <script>
+// ═══════════════════════════════════════════════════════════════
+//  Firebase 初始化 + 資料存取層
+// ═══════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyAhnq8TPnBN2mHr6zTOr2tyc4q0RQKHEeY",
+  authDomain: "histoquest-med.firebaseapp.com",
+  projectId: "histoquest-med",
+  storageBucket: "histoquest-med.firebasestorage.app",
+  messagingSenderId: "441675166484",
+  appId: "1:441675166484:web:22d8a208af22fb95b6c801",
+  measurementId: "G-WJ2FXYZ82Q"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// 集合參照
+const COL = {
+  students: "students",
+  scores: "scores",
+  chapterSettings: "chapterSettings",
+  examSchedule: "examSchedule",
+  aiFeedback: "aiFeedback",
+  disputes: "disputes"
+};
+
+// SCRIPT_URL 仍保留供「題庫讀取」與「AI 評語」使用
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxwd-ZeR8Fc7PQqOHAF542vSGRTpqGrjMMDR8dHNRroSo9FYkTiXYSpa8AEqjoPq4OG/exec";
+
+// ─── 資料存取層 API（統一封裝所有 Firestore 呼叫） ───────
+const DB = {
+  // ── 學生登入資訊 ──
+  async getStudent(studentId) {
+    const doc = await db.collection(COL.students).doc(studentId).get();
+    return doc.exists ? doc.data() : null;
+  },
+  async createStudent(studentId, passwordHash, department) {
+    return db.collection(COL.students).doc(studentId).set({
+      studentId, passwordHash, department,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+  async updateStudentLogin(studentId, department) {
+    const payload = { lastLoginAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (department) payload.department = department;
+    return db.collection(COL.students).doc(studentId).update(payload);
+  },
+
+  // ── 章節開放狀態 ──
+  async getChapterSettings() {
+    const snap = await db.collection(COL.chapterSettings).get();
+    return snap.docs.map(d => ({ chapter: d.id, ...d.data() }));
+  },
+  async setChapterSetting(chapter, status, unlockDate) {
+    return db.collection(COL.chapterSettings).doc(chapter).set({
+      status: status || "open",
+      unlockDate: unlockDate || "",
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+  async deleteChapterSetting(chapter) {
+    return db.collection(COL.chapterSettings).doc(chapter).delete();
+  },
+
+  // ── 作答紀錄（Scores）──
+  async submitScore(record) {
+    return db.collection(COL.scores).add({
+      ...record,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+  async getMyScores(studentId) {
+    // 只讀該學生的紀錄（比全表讀快 20-100 倍）
+    const snap = await db.collection(COL.scores)
+      .where("studentId", "==", studentId)
+      .get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+  async getAllScores(limitDays) {
+    // 教師端：可指定「最近 N 天」以避免拉太多
+    let query = db.collection(COL.scores);
+    if (limitDays && limitDays > 0) {
+      const cutoff = new Date(Date.now() - limitDays * 86400000);
+      query = query.where("ts", ">=", cutoff);
+    }
+    const snap = await query.get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+
+  // ── 考試行程 ──
+  async getExamSchedule() {
+    const snap = await db.collection(COL.examSchedule).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+  async addExam(exam) {
+    return db.collection(COL.examSchedule).add({
+      ...exam,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+  async deleteExam(id) {
+    return db.collection(COL.examSchedule).doc(id).delete();
+  },
+
+  // ── AI 回饋（學生評分）──
+  async rateInsight(record) {
+    return db.collection(COL.aiFeedback).add({
+      ...record,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+
+  // ── 疑義 ──
+  async submitDispute(dispute) {
+    return db.collection(COL.disputes).add({
+      ...dispute,
+      status: "pending",
+      ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+  async getMyDisputes(studentId) {
+    const snap = await db.collection(COL.disputes)
+      .where("studentId", "==", studentId).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+  async getAllDisputes() {
+    const snap = await db.collection(COL.disputes).get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  },
+  async resolveDispute(id, reply) {
+    return db.collection(COL.disputes).doc(id).update({
+      status: "resolved",
+      teacherReply: reply,
+      resolvedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+  async deleteDispute(id) {
+    return db.collection(COL.disputes).doc(id).delete();
+  }
+};
+
+// 簡易密碼雜湊（前端用，SHA-256）
+async function hashPassword(pwd) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode("histoquest-salt-" + pwd);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
 
 // 教師帳號清單（id 統一小寫比對）
 const TEACHER_ACCOUNTS = ["chh", "chhwang", "admin", "teacher"];
@@ -775,19 +1277,13 @@ let chapterSettings = {};
 
 async function loadChapterSettings() {
   try {
-    const res = await fetch(`${SCRIPT_URL}?action=getChapterSettings`);
-    const json = await res.json();
-    if (json.status !== "success") return;
+    const items = await DB.getChapterSettings();
     chapterSettings = {};
-    // 跳過 header row
-    json.data.slice(1).forEach(row => {
-      const [chapter, unlockDate, status] = row;
-      if (chapter) {
-        chapterSettings[chapter] = {
-          unlockDate: unlockDate ? String(unlockDate).substring(0,10) : "",
-          status: status || "open"
-        };
-      }
+    items.forEach(item => {
+      chapterSettings[item.chapter] = {
+        unlockDate: item.unlockDate || "",
+        status: item.status || "open"
+      };
     });
   } catch(e) {
     console.warn("載入章節設定失敗，使用全部開放預設值", e);
@@ -805,6 +1301,148 @@ function isChapterUnlocked(chapterValue) {
     return new Date() >= new Date(setting.unlockDate + "T00:00:00");
   }
   return true;
+}
+
+// ─── 考試行程 + 學習建議 ─────────────────────
+async function loadExamSchedule() {
+  try {
+    const items = await DB.getExamSchedule();
+    examSchedule = items
+      .filter(e => e && e.department && e.examDate)
+      .map(e => ({
+        id: e.id,
+        department: String(e.department).trim(),
+        examName: String(e.examName || "考試").trim(),
+        examDate: String(e.examDate).trim(),
+        scope: typeof e.scope === "string"
+          ? e.scope.split(/[,;\u3001\uFF0C]/).map(s => s.trim()).filter(Boolean)
+          : (Array.isArray(e.scope) ? e.scope : [])
+      }));
+  } catch(e) {
+    console.warn("[examSchedule] 載入失敗", e);
+    examSchedule = [];
+  }
+}
+
+// 找出該科系下「最近的一場未來考試」
+function getNextExamForDept(department) {
+  if (!department || !examSchedule.length) return null;
+  const now = new Date();
+  const future = examSchedule
+    .filter(e => e.department === department)
+    .filter(e => {
+      const d = new Date(e.examDate + "T23:59:59");
+      return !isNaN(d) && d >= now;
+    })
+    .sort((a, b) => new Date(a.examDate) - new Date(b.examDate));
+  return future[0] || null;
+}
+
+// 根據考試 + 學生作答記錄，組出建議文字（純本地邏輯，不呼叫 API）
+function buildStudyHintText(exam, mainRecs) {
+  if (!exam) return null;
+
+  // 距離考試天數
+  const now = new Date(); now.setHours(0,0,0,0);
+  const examDay = new Date(exam.examDate + "T00:00:00");
+  const daysLeft = Math.ceil((examDay - now) / (1000 * 60 * 60 * 24));
+
+  // 計算各章節情況（限定考試範圍內）
+  const scope = exam.scope.length ? exam.scope : [];
+  if (scope.length === 0) return null;
+
+  // 學生主測驗記錄按章節彙整
+  const chapMap = {};
+  (mainRecs || []).forEach(r => {
+    if (!chapMap[r.chapter]) chapMap[r.chapter] = [];
+    chapMap[r.chapter].push(r.score);
+  });
+
+  const notPracticed = [];   // 範圍內、完全未練習
+  const weakChapters = [];   // 範圍內、平均 < 60
+  scope.forEach(ch => {
+    const arr = chapMap[ch];
+    if (!arr || arr.length === 0) {
+      notPracticed.push(ch);
+    } else {
+      const avg = arr.reduce((a,b)=>a+b,0) / arr.length;
+      if (avg < 60) weakChapters.push({ chapter: ch, avg: Math.round(avg) });
+    }
+  });
+
+  // 組合建議句
+  const parts = [];
+
+  // 時程開頭
+  let timeHeader;
+  if (daysLeft === 0) timeHeader = `📌 <strong>今天就是${exam.examName}</strong>`;
+  else if (daysLeft === 1) timeHeader = `📌 <strong>明天就是${exam.examName}</strong>`;
+  else if (daysLeft <= 7) timeHeader = `📌 <strong>${daysLeft} 天後</strong>是 <strong>${exam.examName}</strong>（${formatExamDate(exam.examDate)}）`;
+  else if (daysLeft <= 14) timeHeader = `📌 還有 <strong>${daysLeft} 天</strong>到 <strong>${exam.examName}</strong>（${formatExamDate(exam.examDate)}）`;
+  else timeHeader = `📌 距離 <strong>${exam.examName}</strong> 還有 ${daysLeft} 天`;
+  parts.push(timeHeader);
+
+  // 範圍提示
+  if (notPracticed.length === 0 && weakChapters.length === 0) {
+    parts.push(`✅ 考試範圍（${scope.length} 個章節）你都已練過且平均 60 分以上，狀態良好！建議近期複習薄弱題目維持手感。`);
+  } else {
+    if (notPracticed.length > 0) {
+      const list = notPracticed.slice(0, 5).map(c => `<strong>${c}</strong>`).join("、");
+      const more = notPracticed.length > 5 ? ` 等 ${notPracticed.length} 個` : "";
+      parts.push(`⚠️ 範圍內你還沒練過：${list}${more}，建議優先練習。`);
+    }
+    if (weakChapters.length > 0) {
+      const list = weakChapters.slice(0, 3)
+        .map(c => `<strong>${c.chapter}</strong>（${c.avg} 分）`).join("、");
+      parts.push(`🎯 已練但不熟悉（&lt; 60 分）：${list}，建議搭配錯題練習加強。`);
+    }
+    // 動作建議
+    if (notPracticed.length > 0 && weakChapters.length > 0) {
+      parts.push(`💡 建議先把<strong>沒練過的</strong>跑一次 Stage 1，再回頭強化<strong>不熟悉的</strong>章節。`);
+    }
+  }
+
+  return parts.join("<br>");
+}
+
+function formatExamDate(dateStr) {
+  try {
+    const d = new Date(dateStr + "T00:00:00");
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  } catch(e) { return dateStr; }
+}
+
+// 渲染學習建議到指定位置（"dashboard" 或 "result"）
+async function renderStudyHint(target) {
+  const containerId = target === "dashboard" ? "study-hint-dashboard" : "study-hint-result";
+  const contentId = target === "dashboard" ? "study-hint-dashboard-content" : "study-hint-result-content";
+  const container = document.getElementById(containerId);
+  const content = document.getElementById(contentId);
+  if (!container || !content) return;
+
+  // 沒科系 / 沒考試 → 隱藏整個區塊
+  const exam = getNextExamForDept(currentDepartment);
+  if (!exam) {
+    container.style.display = "none";
+    return;
+  }
+
+  // 撈作答記錄（Firestore，只讀該學生自己的）
+  let mainRecs = [];
+  try {
+    const mine = await DB.getMyScores(currentUser);
+    mainRecs = mine
+      .filter(r => !r.isPractice)
+      .map(r => ({ chapter: String(r.chapter || "").trim(), score: Number(r.score) || 0 }));
+  } catch(e) { console.warn("renderStudyHint 讀資料失敗", e); }
+
+  const hintText = buildStudyHintText(exam, mainRecs);
+  if (!hintText) {
+    container.style.display = "none";
+    return;
+  }
+  content.innerHTML = hintText;
+  container.style.display = "block";
 }
 
 function getChapterLockReason(chapterValue) {
@@ -867,6 +1505,8 @@ function buildChapterSelect() {
 }
 
 let currentUser = "";
+let currentDepartment = "";    // 學生科系（醫學系/牙醫系/醫技系/研究生）
+let examSchedule = [];          // 從後端載入的考試行程
 let currentChapter = "";
 let currentMode = "";
 let originalQuizData = [];
@@ -1071,42 +1711,111 @@ function playBeep() {
 }
 
 // ─── Login ────────────────────────────────────
-function performLogin() {
+async function performLogin() {
   const id = document.getElementById("student-id-input").value.trim();
   const pwd = document.getElementById("password-input").value.trim();
+  const dept = document.getElementById("department-input").value;
   if (!id || !pwd) return alert("請輸入學號與密碼！");
 
-  currentUser = id;
+  const btn = document.querySelector('#login-section button[onclick="performLogin()"]');
+  const originalText = btn ? btn.innerText : "";
+  if (btn) { btn.disabled = true; btn.innerText = "登入中…"; }
 
-  if (TEACHER_ACCOUNTS.includes(id.toLowerCase())) {
-    // → Teacher path
-    document.getElementById("login-section").classList.add("hidden");
-    document.getElementById("teacher-id-display").innerText = id;
-    document.getElementById("teacher-section").classList.remove("hidden");
-    loadChapterSettings();  // 預先載入給章節管理用
-    loadTeacherData();
-  } else {
-    // → Student path
+  try {
+    currentUser = id;
+
+    if (TEACHER_ACCOUNTS.includes(id.toLowerCase())) {
+      // → Teacher path（教師不需選科系）
+      currentDepartment = "";
+      document.getElementById("login-section").classList.add("hidden");
+      document.getElementById("teacher-id-display").innerText = id;
+      document.getElementById("teacher-section").classList.remove("hidden");
+      await loadChapterSettings();
+      await loadExamSchedule();
+      loadTeacherData();
+      return;
+    }
+
+    // → Student path：必須選科系
+    if (!dept) { alert("請選擇您的科系！"); return; }
+
+    // 密碼驗證：查 Firestore 內是否已有這位學生
+    const pwdHash = await hashPassword(pwd);
+    const existing = await DB.getStudent(id);
+
+    if (existing) {
+      // 已有紀錄 → 驗證密碼
+      if (existing.passwordHash !== pwdHash) {
+        alert("密碼錯誤！\n\n若忘記密碼，請聯絡教師/助教重設。");
+        return;
+      }
+      // 密碼正確 → 更新最後登入時間 & 科系
+      await DB.updateStudentLogin(id, dept);
+    } else {
+      // 首次登入 → 建立帳號（首次密碼即為之後的密碼）
+      await DB.createStudent(id, pwdHash, dept);
+    }
+
+    currentDepartment = dept;
+    try { localStorage.setItem(`dept_${id}`, dept); } catch(e) {}
+
     document.getElementById("display-student-id").innerText = id;
+    document.getElementById("display-department").innerText = dept;
     document.getElementById("login-section").classList.add("hidden");
     document.getElementById("dashboard-section").classList.remove("hidden");
-    // 先載入章節設定，再建立下拉選單
-    loadChapterSettings().then(() => buildChapterSelect());
-    // 延遲 1.5 秒再撈個人統計，避免和「開始載入」搶 Apps Script
-    setTimeout(() => loadPersonalStats(id), 1500);
+
+    // 平行載入所有需要的資料（Firestore 讀取比 Apps Script 快很多，可並行）
+    await loadChapterSettings();
+    buildChapterSelect();
+    await loadExamSchedule();
+    renderStudyHint("dashboard");
+    loadPersonalStats(id);  // 這個裡面會 renderWeekStreak
+  } catch (err) {
+    console.error("登入失敗", err);
+    alert("登入時發生錯誤：" + (err.message || err) + "\n\n請確認網路連線後再試。");
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerText = originalText; }
   }
 }
 
+// 學號輸入時自動帶入上次選的科系
+document.addEventListener("DOMContentLoaded", () => {
+  const idInput = document.getElementById("student-id-input");
+  const deptInput = document.getElementById("department-input");
+  if (idInput && deptInput) {
+    idInput.addEventListener("blur", () => {
+      const id = idInput.value.trim();
+      if (!id) return;
+      try {
+        const saved = localStorage.getItem(`dept_${id}`);
+        if (saved && !deptInput.value) deptInput.value = saved;
+      } catch(e) {}
+    });
+  }
+});
+
 function performLogout() {
   currentUser = "";
+  currentDepartment = "";
   myRawRows = [];
   document.getElementById("dashboard-section").classList.add("hidden");
   document.getElementById("my-summary-section").classList.add("hidden");
   document.getElementById("login-section").classList.remove("hidden");
   document.getElementById("student-id-input").value = "";
   document.getElementById("password-input").value = "";
+  document.getElementById("department-input").value = "";
   document.getElementById("my-summary-btn").style.display = "none";
-  document.getElementById("personal-stats").style.display = "none";
+
+  // 重置 hero 統計與本週日曆
+  const attEl = document.getElementById("stat-attempts"); if (attEl) attEl.innerText = "—";
+  const bestEl = document.getElementById("stat-best"); if (bestEl) bestEl.innerText = "—";
+  const wDays = document.getElementById("week-active-days"); if (wDays) wDays.innerText = "0";
+  const dots = document.querySelectorAll("#week-dots .week-dot");
+  const labels = ["一","二","三","四","五","六","日"];
+  dots.forEach((d, i) => { d.innerHTML = labels[i]; d.classList.remove("done","today"); });
+
+  const sh1 = document.getElementById("study-hint-dashboard"); if (sh1) sh1.style.display = "none";
+  const sh2 = document.getElementById("study-hint-result"); if (sh2) sh2.style.display = "none";
   if (window.msTrendChart) { window.msTrendChart.destroy(); window.msTrendChart = null; }
 }
 
@@ -1145,10 +1854,9 @@ async function submitFeedback() {
 
   btn.disabled = true; btn.innerText = "送出中…";
   try {
-    await fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "submitFeedback", name, type, content }),
-      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    await db.collection("developerFeedback").add({
+      name, type, content,
+      ts: firebase.firestore.FieldValue.serverTimestamp()
     });
     status.style.display = "block";
     status.style.background = "var(--success-light)";
@@ -1171,26 +1879,79 @@ let myRawRows = [];
 
 async function loadPersonalStats(studentId) {
   try {
-    const res = await fetch(`${SCRIPT_URL}?action=getLeaderboard`);
-    const json = await res.json();
-    if (json.status !== "success") return;
-    const rows = json.data.slice(1); // skip header row
-    const mine = rows.filter(r => String(r[1]).trim().toLowerCase() === studentId.toLowerCase());
+    // 從 Firestore 讀取自己的紀錄（比舊版全表讀快 20-100 倍）
+    const mine = await DB.getMyScores(studentId);
     myRawRows = mine;  // 暫存（供總評語使用）
-    if (mine.length === 0) return;
+
+    // 即便 mine 是空的也要呼叫 renderWeekStreak
+    renderWeekStreak(mine);
+
+    if (mine.length === 0) {
+      document.getElementById("stat-attempts").innerText = "0";
+      document.getElementById("stat-best").innerText = "—";
+      document.getElementById("my-summary-btn").style.display = "none";
+      return;
+    }
 
     // 主測驗（非練習）才計入「次數」與「最高分」
-    // r[7] = IsPractice 欄位（"TRUE" / "FALSE" / 空字串）。空字串視為主測驗（向前相容）
-    const isPractice = r => String(r[7] || "").trim().toUpperCase() === "TRUE";
-    const mainOnly = mine.filter(r => !isPractice(r));
-    const s2 = mainOnly.filter(r => String(r[3]) === "2");
-    const best = s2.length ? Math.max(...s2.map(r => Number(r[4]) || 0)) : null;
+    const mainOnly = mine.filter(r => !r.isPractice);
+    const s2 = mainOnly.filter(r => String(r.stage) === "2");
+    const best = s2.length ? Math.max(...s2.map(r => Number(r.score) || 0)) : null;
 
     document.getElementById("stat-attempts").innerText = mainOnly.length;
     document.getElementById("stat-best").innerText = best !== null ? best + " 分" : "—";
-    document.getElementById("personal-stats").style.display = "grid";
     document.getElementById("my-summary-btn").style.display = "block";
-  } catch(e) {}
+  } catch(e) {
+    console.error("[loadPersonalStats] 失敗", e);
+  }
+}
+
+// 本週學習日曆：根據作答時間戳更新 .week-dot
+function renderWeekStreak(records) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const dayOfWeek = today.getDay();  // 0=Sun, 1=Mon, ...
+
+  const monday = new Date(today);
+  const diff = (dayOfWeek === 0) ? -6 : (1 - dayOfWeek);
+  monday.setDate(monday.getDate() + diff);
+
+  const weekDays = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(d.getDate() + i);
+    weekDays.push(d);
+  }
+
+  // 從 Firestore 記錄取出 ts（可能是 Timestamp 物件或字串）
+  function tsToDate(r) {
+    if (!r.ts) return null;
+    // Firestore Timestamp
+    if (typeof r.ts.toDate === "function") return r.ts.toDate();
+    return new Date(r.ts);
+  }
+
+  const activeDays = weekDays.map(d => {
+    const dStr = d.toISOString().slice(0, 10);
+    return (records || []).some(r => {
+      const ts = tsToDate(r);
+      return ts && !isNaN(ts) && ts.toISOString().slice(0, 10) === dStr;
+    });
+  });
+
+  const dots = document.querySelectorAll("#week-dots .week-dot");
+  const labels = ["一", "二", "三", "四", "五", "六", "日"];
+  let activeCount = 0;
+  dots.forEach((dot, i) => {
+    dot.innerHTML = activeDays[i] ? "🏆" : labels[i];
+    dot.classList.toggle("done", activeDays[i]);
+    const isToday = weekDays[i].getTime() === today.getTime();
+    dot.classList.toggle("today", isToday);
+    if (activeDays[i]) activeCount++;
+  });
+
+  const countEl = document.getElementById("week-active-days");
+  if (countEl) countEl.innerText = activeCount;
 }
 
 // ─── 我的作答總評語 ────────────────────────────────
@@ -1200,7 +1961,7 @@ function openMySummary() {
   document.getElementById("my-summary-id").innerText = currentUser;
 
   // 填入章節篩選器（依現有資料動態產生）
-  const chapters = [...new Set(myRawRows.map(r => String(r[2]).trim()).filter(Boolean))].sort();
+  const chapters = [...new Set(myRawRows.map(r => String(r.chapter || "").trim()).filter(Boolean))].sort();
   const chapterSel = document.getElementById("summary-filter-chapter");
   chapterSel.innerHTML = '<option value="">全部章節</option>' +
     chapters.map(c => `<option value="${c}">${c}</option>`).join("");
@@ -1230,17 +1991,15 @@ function renderMySummary() {
   const fStage = document.getElementById("summary-filter-stage").value;
   const fType = document.getElementById("summary-filter-type").value;
 
-  const isPractice = r => String(r[7] || "").trim().toUpperCase() === "TRUE";
-
-  // 整理為標準 record
+  // 整理為標準 record（Firestore 已是物件格式）
   const records = myRawRows.map(r => ({
-    timestamp: r[0],
-    chapter: String(r[2]).trim(),
-    stage: String(r[3]).trim(),
-    score: Number(r[4]) || 0,
-    wrongImgs: r[5] || "",
-    violations: Number(r[6]) || 0,
-    isPractice: isPractice(r)
+    timestamp: r.ts && r.ts.toDate ? r.ts.toDate() : new Date(r.ts || 0),
+    chapter: String(r.chapter || "").trim(),
+    stage: String(r.stage || "").trim(),
+    score: Number(r.score) || 0,
+    wrongImgs: r.wrongImgs || "",
+    violations: Number(r.violations) || 0,
+    isPractice: !!r.isPractice
   }));
 
   let filtered = records;
@@ -1643,18 +2402,13 @@ async function rateInsight(insightId, rating) {
   const msg = document.getElementById(`ms-rate-msg-${insightId}`);
   if (msg) msg.style.display = "inline";
 
-  // 送回後端記錄
+  // 送回 Firestore 記錄
   try {
-    await fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "rateInsight",
-        studentId: currentUser,
-        rating: rating,
-        insightText: (window._lastInsight && window._lastInsight.text || "").slice(0, 1000),
-        ts: new Date().toISOString()
-      }),
-      headers: { "Content-Type": "text/plain;charset=utf-8" }
+    await DB.rateInsight({
+      studentId: currentUser,
+      department: currentDepartment || "",
+      rating: rating,
+      insightText: (window._lastInsight && window._lastInsight.text || "").slice(0, 1000)
     });
   } catch(e) {
     console.warn("評分送出失敗:", e);
@@ -2199,6 +2953,9 @@ function endQuiz() {
   document.getElementById("quiz-section").classList.add("hidden");
   document.getElementById("result-section").classList.remove("hidden");
 
+  // 延遲渲染學習建議（讓 leaderboard 有時間更新到剛交的這次）
+  setTimeout(() => renderStudyHint("result"), 2000);
+
   // 累積錯題到 localStorage（最近 50 筆），供「我的作答總評語」AI 分析具體弱點
   try {
     const key = `wrongHistory_${currentUser}`;
@@ -2306,21 +3063,18 @@ function endQuiz() {
   // 計算總作答時長（秒）。錯題練習不算入時長分析
   const durationSec = quizStartTime > 0 ? Math.round((Date.now() - quizStartTime) / 1000) : 0;
 
-  fetch(SCRIPT_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      action: "submitScore",
-      studentId: currentUser,
-      chapter: currentChapter,
-      stage: currentMode,
-      score: finalScore,
-      wrongImgs: wrongImgs,
-      violations: violationCount,
-      isPractice: isPracticeMode,  // true = 錯題練習，false = 主測驗
-      duration: durationSec         // 新增：總作答時長（秒）
-    }),
-    headers: { "Content-Type": "text/plain;charset=utf-8" }
-  });
+  // 寫入 Firestore（fire-and-forget，不阻擋 UI）
+  DB.submitScore({
+    studentId: currentUser,
+    department: currentDepartment || "",
+    chapter: currentChapter,
+    stage: String(currentMode),
+    score: Number(finalScore),
+    wrongImgs: wrongImgs,
+    violations: Number(violationCount) || 0,
+    isPractice: !!isPracticeMode,
+    duration: durationSec
+  }).catch(err => console.error("submitScore 失敗", err));
 }
 
 function practiceWrongAnswers() {
@@ -2349,37 +3103,37 @@ function backToDashboard() {
 
 // ─── Teacher Dashboard ────────────────────────
 function switchTeacherTab(id) {
-  const ids = ["t-overview","t-difficulty","t-students","t-wrongs","t-heatmap","t-individual","t-chapters"];
+  const ids = ["t-overview","t-difficulty","t-students","t-wrongs","t-trend","t-heatmap","t-individual","t-chapters","t-exam"];
   document.querySelectorAll(".teacher-tab").forEach((t, i) =>
     t.classList.toggle("active", ids[i] === id));
   document.querySelectorAll(".teacher-panel").forEach(p => p.classList.toggle("active", p.id === id));
   // 切換到章節管理時刷新列表
   if (id === "t-chapters") renderChapterMgmt();
+  if (id === "t-exam") renderExamList();
 }
 
 async function loadTeacherData() {
   try {
-    const res = await fetch(`${SCRIPT_URL}?action=getLeaderboard`);
-    const json = await res.json();
-    if (json.status !== "success") return;
+    // 從 Firestore 讀取全部作答紀錄（預設最近 180 天，可調整）
+    const items = await DB.getAllScores(180);
 
-    // 欄位：[Timestamp, Student ID, Chapter, Stage, Score, WrongImgs, Violations, IsPractice, Duration]
-    // 兼容：缺欄位視為主測驗（IsPractice = false）、缺時長視為 0
-    const allRows = json.data.slice(1).map(r => ({
-      ts: r[0],
-      id: String(r[1]).trim(),
-      chapter: String(r[2]).trim(),
-      stage: String(r[3]).trim(),
-      score: Number(r[4]) || 0,
-      wrongImgs: r.length > 5 ? String(r[5] || "").split(",").filter(Boolean) : [],
-      violations: r.length > 6 ? Number(r[6]) || 0 : 0,
-      isPractice: r.length > 7 ? String(r[7] || "").trim().toUpperCase() === "TRUE" : false,
-      duration: r.length > 8 ? Number(r[8]) || 0 : 0   // 新增：作答時長（秒）
+    const allRows = items.map(r => ({
+      ts: r.ts && r.ts.toDate ? r.ts.toDate() : new Date(r.ts || 0),
+      id: String(r.studentId || "").trim(),
+      department: String(r.department || "").trim(),
+      chapter: String(r.chapter || "").trim(),
+      stage: String(r.stage || "").trim(),
+      score: Number(r.score) || 0,
+      wrongImgs: r.wrongImgs
+        ? (typeof r.wrongImgs === "string" ? r.wrongImgs.split(",").filter(Boolean) : r.wrongImgs)
+        : [],
+      violations: Number(r.violations) || 0,
+      isPractice: !!r.isPractice,
+      duration: Number(r.duration) || 0
     }));
 
     // 教師後台只看主測驗，避免錯題練習污染班級統計
     const rows = allRows.filter(r => !r.isPractice);
-
     renderTeacherDashboard(rows);
   } catch(e) {
     console.error("Teacher data load failed", e);
@@ -2387,6 +3141,105 @@ async function loadTeacherData() {
 }
 
 function refreshDashboard() { loadTeacherData(); loadChapterSettings(); }
+
+// ─── 考試行程管理（教師端）───────────────────
+async function renderExamList() {
+  // 重新撈一次最新資料
+  await loadExamSchedule();
+  const listEl = document.getElementById("exam-list");
+  const emptyEl = document.getElementById("exam-empty");
+  if (!listEl || !emptyEl) return;
+
+  if (examSchedule.length === 0) {
+    listEl.innerHTML = "";
+    emptyEl.style.display = "block";
+    return;
+  }
+  emptyEl.style.display = "none";
+
+  // 按科系分組
+  const byDept = {};
+  examSchedule.forEach((e, idx) => {
+    if (!byDept[e.department]) byDept[e.department] = [];
+    byDept[e.department].push({ ...e, idx });
+  });
+
+  const now = new Date(); now.setHours(0,0,0,0);
+  let html = "";
+  Object.entries(byDept).forEach(([dept, exams]) => {
+    html += `<div style="font-size:12px;font-weight:600;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:0.05em;">${dept}</div>`;
+    exams.sort((a,b) => new Date(a.examDate) - new Date(b.examDate));
+    exams.forEach(e => {
+      const examDay = new Date(e.examDate + "T00:00:00");
+      const isPast = examDay < now;
+      const daysLeft = Math.ceil((examDay - now) / (1000 * 60 * 60 * 24));
+      const statusTag = isPast
+        ? `<span style="font-size:11px;background:#F3F4F6;color:#6B7280;padding:2px 8px;border-radius:10px;">已過</span>`
+        : daysLeft <= 7
+          ? `<span style="font-size:11px;background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:10px;">${daysLeft} 天後</span>`
+          : `<span style="font-size:11px;background:#DBEAFE;color:#1E40AF;padding:2px 8px;border-radius:10px;">${daysLeft} 天後</span>`;
+
+      html += `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;opacity:${isPast ? '0.6' : '1'};">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <span style="font-size:14px;font-weight:600;">${e.examName}</span>
+                ${statusTag}
+              </div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">📅 ${e.examDate}</div>
+              <div style="font-size:12px;color:var(--text);">
+                <strong>範圍：</strong>${e.scope.length ? e.scope.join("、") : "<span style=\"color:var(--muted);\">未設定</span>"}
+              </div>
+            </div>
+            <button onclick="deleteExamSchedule(${e.idx})" style="background:#FEE2E2;color:#991B1B;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit;">刪除</button>
+          </div>
+        </div>
+      `;
+    });
+  });
+
+  listEl.innerHTML = html;
+}
+
+async function addExamSchedule() {
+  const dept = document.getElementById("exam-dept").value;
+  const name = document.getElementById("exam-name").value.trim();
+  const date = document.getElementById("exam-date").value;
+  const scope = document.getElementById("exam-scope").value.trim();
+
+  if (!dept || !name || !date) {
+    return alert("請填寫科系、考試名稱、考試日期！");
+  }
+
+  try {
+    await DB.addExam({
+      department: dept,
+      examName: name,
+      examDate: date,
+      scope: scope
+    });
+    document.getElementById("exam-name").value = "";
+    document.getElementById("exam-date").value = "";
+    document.getElementById("exam-scope").value = "";
+    await renderExamList();
+  } catch(e) {
+    alert("新增失敗：" + (e.message || e));
+  }
+}
+
+async function deleteExamSchedule(idx) {
+  const exam = examSchedule[idx];
+  if (!exam || !exam.id) return;
+  if (!confirm(`確定刪除「${exam.department} - ${exam.examName}（${exam.examDate}）」嗎？`)) return;
+
+  try {
+    await DB.deleteExam(exam.id);
+    await renderExamList();
+  } catch(e) {
+    alert("刪除失敗：" + (e.message || e));
+  }
+}
 
 // ─── 章節管理 ─────────────────────────────────
 function renderChapterMgmt() {
@@ -2428,24 +3281,14 @@ function renderChapterMgmt() {
 }
 
 async function saveChapterSetting(chapter, status, unlockDate) {
-  const listEl = document.getElementById("chapter-mgmt-list");
   // 樂觀更新本地狀態
   chapterSettings[chapter] = { unlockDate: unlockDate || "", status };
   renderChapterMgmt();
 
   try {
-    await fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "setChapterSetting",
-        chapter,
-        status,
-        unlockDate: unlockDate || ""
-      }),
-      headers: { "Content-Type": "text/plain;charset=utf-8" }
-    });
+    await DB.setChapterSetting(chapter, status, unlockDate || "");
   } catch(e) {
-    alert("儲存失敗：" + e.message);
+    alert("儲存失敗：" + (e.message || e));
     await loadChapterSettings();
     renderChapterMgmt();
   }
@@ -2468,16 +3311,11 @@ async function bulkChapterAction(status) {
   allChapters.forEach(ch => { chapterSettings[ch] = { unlockDate: "", status }; });
   renderChapterMgmt();
 
-  // 並行送出（Apps Script 會排隊處理）
-  for (const ch of allChapters) {
-    try {
-      await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "setChapterSetting", chapter: ch, status, unlockDate: "" }),
-        headers: { "Content-Type": "text/plain;charset=utf-8" }
-      });
-    } catch(e) { /* 繼續送下一個 */ }
-  }
+  // 並行送出（Firestore 支援並行寫入）
+  const promises = allChapters.map(ch =>
+    DB.setChapterSetting(ch, status, "").catch(e => console.warn("批次失敗:", ch, e))
+  );
+  await Promise.all(promises);
   alert("批次設定完成");
 }
 
