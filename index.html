@@ -936,6 +936,7 @@
       <button class="teacher-tab" onclick="switchTeacherTab('t-individual')">個別學生</button>
       <button class="teacher-tab" onclick="switchTeacherTab('t-chapters')">章節管理</button>
       <button class="teacher-tab" onclick="switchTeacherTab('t-exam')">考試行程</button>
+      <button class="teacher-tab" onclick="switchTeacherTab('t-password')">密碼管理</button>
     </div>
 
     <!-- Panel: Overview -->
@@ -1111,6 +1112,50 @@
         尚無任何考試行程
       </div>
     </div>
+
+    <!-- Panel: 密碼管理 -->
+    <div id="t-password" class="teacher-panel">
+      <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:10px 14px;margin-bottom:1rem;">
+        <p style="font-size:12px;color:#78350F;line-height:1.6;">
+          🔐 <strong>學生忘記密碼時</strong>，教師可在此重設。重設後學生下次登入即用新密碼，舊密碼失效。
+          <br>建議設定為容易記憶的臨時密碼（例：學號後 4 碼），並請學生登入後自行改回。
+        </p>
+      </div>
+
+      <!-- 重設表單 -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:1.25rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px;">🔑 重設學生密碼</div>
+
+        <div style="margin-bottom:10px;">
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px;">學生學號</label>
+          <input id="reset-student-id" type="text" placeholder="輸入學號後按「查詢」" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit;">
+        </div>
+
+        <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;width:auto;margin-bottom:10px;" onclick="lookupStudent()">🔍 查詢學生資料</button>
+
+        <div id="student-lookup-result" style="display:none;background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--text);line-height:1.7;"></div>
+
+        <div style="margin-bottom:10px;">
+          <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:3px;">新密碼</label>
+          <input id="reset-new-password" type="text" placeholder="建議：學號後 4 碼" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit;">
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">⚠️ 顯示為明文以便教師記錄，設定後請告知學生並提醒盡快更換</div>
+        </div>
+
+        <button class="btn btn-primary" style="padding:8px 18px;font-size:13px;" onclick="resetStudentPassword()">
+          🔑 重設密碼
+        </button>
+
+        <div id="reset-status" style="display:none;margin-top:10px;padding:8px 12px;border-radius:8px;font-size:12px;"></div>
+      </div>
+
+      <!-- 全班學生列表（可搜尋） -->
+      <div style="font-size:13px;font-weight:600;margin-bottom:10px;">👥 全班學生（點擊帶入學號）</div>
+      <input id="student-search" type="text" placeholder="搜尋學號或科系..." oninput="filterStudentList()" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit;margin-bottom:10px;">
+      <div id="student-list-container"></div>
+      <div id="student-list-empty" style="display:none;text-align:center;padding:2rem;color:var(--muted);font-size:13px;">
+        尚無學生資料
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1165,6 +1210,16 @@ const DB = {
     const payload = { lastLoginAt: firebase.firestore.FieldValue.serverTimestamp() };
     if (department) payload.department = department;
     return db.collection(COL.students).doc(studentId).update(payload);
+  },
+  async resetPassword(studentId, newPasswordHash) {
+    return db.collection(COL.students).doc(studentId).update({
+      passwordHash: newPasswordHash,
+      passwordResetAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+  async getAllStudents() {
+    const snap = await db.collection(COL.students).get();
+    return snap.docs.map(d => ({ studentId: d.id, ...d.data() }));
   },
 
   // ── 章節開放狀態 ──
@@ -3103,13 +3158,14 @@ function backToDashboard() {
 
 // ─── Teacher Dashboard ────────────────────────
 function switchTeacherTab(id) {
-  const ids = ["t-overview","t-difficulty","t-students","t-wrongs","t-trend","t-heatmap","t-individual","t-chapters","t-exam"];
+  const ids = ["t-overview","t-difficulty","t-students","t-wrongs","t-trend","t-heatmap","t-individual","t-chapters","t-exam","t-password"];
   document.querySelectorAll(".teacher-tab").forEach((t, i) =>
     t.classList.toggle("active", ids[i] === id));
   document.querySelectorAll(".teacher-panel").forEach(p => p.classList.toggle("active", p.id === id));
   // 切換到章節管理時刷新列表
   if (id === "t-chapters") renderChapterMgmt();
   if (id === "t-exam") renderExamList();
+  if (id === "t-password") loadStudentList();
 }
 
 async function loadTeacherData() {
@@ -3238,6 +3294,174 @@ async function deleteExamSchedule(idx) {
     await renderExamList();
   } catch(e) {
     alert("刪除失敗：" + (e.message || e));
+  }
+}
+
+// ─── 密碼管理（教師端）─────────────────────────
+let allStudentsCache = [];
+
+async function loadStudentList() {
+  const container = document.getElementById("student-list-container");
+  const emptyEl = document.getElementById("student-list-empty");
+  if (!container || !emptyEl) return;
+
+  container.innerHTML = `<div style="text-align:center;padding:1rem;color:var(--muted);font-size:12px;">
+    <div style="display:inline-block;width:14px;height:14px;border:2px solid #E5E7EB;border-top-color:#8B5CF6;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:6px;vertical-align:middle;"></div>
+    載入學生資料中...
+  </div>`;
+
+  try {
+    allStudentsCache = await DB.getAllStudents();
+    renderStudentList(allStudentsCache);
+  } catch(e) {
+    container.innerHTML = `<div style="color:var(--danger);font-size:12px;padding:1rem;text-align:center;">載入失敗：${e.message || e}</div>`;
+  }
+}
+
+function renderStudentList(students) {
+  const container = document.getElementById("student-list-container");
+  const emptyEl = document.getElementById("student-list-empty");
+  if (!container || !emptyEl) return;
+
+  if (!students || students.length === 0) {
+    container.innerHTML = "";
+    emptyEl.style.display = "block";
+    return;
+  }
+  emptyEl.style.display = "none";
+
+  // 按科系分組
+  const byDept = {};
+  students.forEach(s => {
+    const d = s.department || "（未分類）";
+    if (!byDept[d]) byDept[d] = [];
+    byDept[d].push(s);
+  });
+
+  let html = "";
+  Object.entries(byDept).sort().forEach(([dept, list]) => {
+    html += `<div style="font-size:11px;font-weight:600;color:var(--muted);margin:12px 0 6px;text-transform:uppercase;letter-spacing:0.05em;">${dept}（${list.length}）</div>`;
+    list.sort((a, b) => String(a.studentId).localeCompare(String(b.studentId)));
+    list.forEach(s => {
+      const lastLogin = s.lastLoginAt && s.lastLoginAt.toDate
+        ? new Date(s.lastLoginAt.toDate()).toLocaleDateString("zh-TW", { month: "numeric", day: "numeric" })
+        : "—";
+      const resetMark = s.passwordResetAt ? `<span style="font-size:10px;background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:8px;margin-left:6px;">已重設</span>` : "";
+      html += `
+        <div onclick="selectStudentForReset('${String(s.studentId).replace(/'/g, "\\'")}')"
+             style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background 0.15s;"
+             onmouseover="this.style.background='#F3F4F6'" onmouseout="this.style.background='var(--surface)'">
+          <div>
+            <span style="font-size:13px;font-weight:500;">${s.studentId}</span>
+            ${resetMark}
+          </div>
+          <div style="font-size:11px;color:var(--muted);">最後登入 ${lastLogin}</div>
+        </div>
+      `;
+    });
+  });
+
+  container.innerHTML = html;
+}
+
+function filterStudentList() {
+  const q = document.getElementById("student-search").value.trim().toLowerCase();
+  if (!q) return renderStudentList(allStudentsCache);
+  const filtered = allStudentsCache.filter(s =>
+    String(s.studentId).toLowerCase().includes(q) ||
+    String(s.department || "").toLowerCase().includes(q)
+  );
+  renderStudentList(filtered);
+}
+
+function selectStudentForReset(studentId) {
+  document.getElementById("reset-student-id").value = studentId;
+  lookupStudent();
+}
+
+async function lookupStudent() {
+  const idInput = document.getElementById("reset-student-id");
+  const resultEl = document.getElementById("student-lookup-result");
+  const id = idInput.value.trim();
+
+  if (!id) {
+    alert("請輸入學號");
+    return;
+  }
+
+  resultEl.style.display = "block";
+  resultEl.innerHTML = `<span style="color:var(--muted);">查詢中...</span>`;
+
+  try {
+    const student = await DB.getStudent(id);
+    if (!student) {
+      resultEl.style.background = "var(--danger-light)";
+      resultEl.style.color = "var(--danger)";
+      resultEl.innerHTML = `❌ 找不到學號「${id}」的學生記錄。請確認學號正確，或該生尚未登入過。`;
+      return;
+    }
+    const createdAt = student.createdAt && student.createdAt.toDate
+      ? new Date(student.createdAt.toDate()).toLocaleDateString("zh-TW")
+      : "—";
+    const lastLoginAt = student.lastLoginAt && student.lastLoginAt.toDate
+      ? new Date(student.lastLoginAt.toDate()).toLocaleString("zh-TW")
+      : "—";
+    const resetAt = student.passwordResetAt && student.passwordResetAt.toDate
+      ? new Date(student.passwordResetAt.toDate()).toLocaleString("zh-TW")
+      : null;
+
+    resultEl.style.background = "var(--bg)";
+    resultEl.style.color = "var(--text)";
+    resultEl.innerHTML = `
+      ✅ 找到學生：<strong>${student.studentId}</strong>
+      <br>科系：<strong>${student.department || "（未設定）"}</strong>
+      <br>首次登入：${createdAt}
+      <br>最後登入：${lastLoginAt}
+      ${resetAt ? `<br><span style="color:var(--amber);">🔑 上次密碼重設：${resetAt}</span>` : ""}
+    `;
+  } catch(e) {
+    resultEl.style.background = "var(--danger-light)";
+    resultEl.style.color = "var(--danger)";
+    resultEl.innerHTML = `❌ 查詢失敗：${e.message || e}`;
+  }
+}
+
+async function resetStudentPassword() {
+  const id = document.getElementById("reset-student-id").value.trim();
+  const newPwd = document.getElementById("reset-new-password").value.trim();
+  const statusEl = document.getElementById("reset-status");
+
+  if (!id) return alert("請輸入學生學號");
+  if (!newPwd) return alert("請輸入新密碼");
+  if (newPwd.length < 3) return alert("新密碼至少 3 個字元");
+
+  // 先確認學生存在
+  const student = await DB.getStudent(id);
+  if (!student) {
+    return alert(`找不到學號「${id}」的學生。請先點擊「查詢學生資料」確認。`);
+  }
+
+  if (!confirm(`確定將學生「${id}」的密碼重設為「${newPwd}」嗎？\n\n舊密碼會立刻失效。`)) return;
+
+  statusEl.style.display = "block";
+  statusEl.style.background = "var(--bg)";
+  statusEl.style.color = "var(--muted)";
+  statusEl.innerText = "重設中...";
+
+  try {
+    const newHash = await hashPassword(newPwd);
+    await DB.resetPassword(id, newHash);
+    statusEl.style.background = "var(--success-light)";
+    statusEl.style.color = "var(--success)";
+    statusEl.innerHTML = `✅ 密碼已重設成功！<br>請告知學生「<strong>${id}</strong>」新密碼為「<strong>${newPwd}</strong>」`;
+    // 更新列表
+    loadStudentList();
+    // 清空表單
+    document.getElementById("reset-new-password").value = "";
+  } catch(e) {
+    statusEl.style.background = "var(--danger-light)";
+    statusEl.style.color = "var(--danger)";
+    statusEl.innerText = "❌ 重設失敗：" + (e.message || e);
   }
 }
 
