@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HistoQuest 組織學實驗測驗系統</title>
+  <title>HistoQuiz 組織學實驗測驗系統</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -537,7 +537,7 @@
     <div class="logo-mark">
       <div class="logo-icon">醫學</div>
       <div>
-        <div class="logo-text">HistoQuest</div>
+        <div class="logo-text">HistoQuiz</div>
         <div class="logo-sub">組織學實驗測驗系統·解剖學科</div>
       </div>
     </div>
@@ -656,8 +656,8 @@
       <div class="dash-field">
         <div class="dash-field-label">🎯 選擇學習階段</div>
         <select id="stage-select">
-          <option value="1">Stage 1 ── 記憶模式（選擇題測驗）</option>
-          <option value="2">Stage 2 ── 測驗模式（35s 跑考練習）</option>
+          <option value="1">Stage 1 ── 選擇題測驗</option>
+          <option value="2">Stage 2 ── 35s 跑考模擬</option>
         </select>
       </div>
 
@@ -852,6 +852,26 @@
     </div>
 
     <button id="action-btn" class="btn btn-primary" onclick="handleAction()">下一步</button>
+  </div>
+
+  <!-- 階段暫停 modal（每 5 題後彈出，讓學生選是否繼續）-->
+  <div id="stage-pause-modal" class="hidden" style="position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,0.6);display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:var(--surface);border-radius:20px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.25);text-align:center;">
+      <div style="font-size:44px;margin-bottom:8px;">🎯</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;">已完成 <span id="pause-done-count">5</span> 題！</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;">
+        目前正確 <strong id="pause-correct-count" style="color:var(--success);">0</strong> / <span id="pause-done-total">5</span> 題<br>
+        還有 <strong id="pause-remain-count" style="color:var(--accent);">0</strong> 題可繼續，或您可以現在結束
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="continueQuiz()" class="btn btn-primary" style="padding:12px;">
+          ▶️ 繼續測驗（再做 5 題）
+        </button>
+        <button onclick="stopQuizEarly()" style="padding:12px;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;">
+          🏁 結束測驗（送出成績）
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -3000,7 +3020,53 @@ function handleAction(isTimeout = false) {
   }
 
   wrongAnswers.push({ img: q.img, driveId: q.driveId || "", question: q.question || "", studentAns: studentAnsText, correctAns: q.answer, explanation: q.explanation, isCorrect });
-  setTimeout(() => { currentIdx++; loadQuestion(); }, 900);
+  setTimeout(() => {
+    currentIdx++;
+    // 每 5 題後暫停一次（且後面還有題）→ 詢問學生要不要繼續
+    if (currentIdx > 0 && currentIdx % 5 === 0 && currentIdx < quizData.length) {
+      showStagePause();
+    } else {
+      loadQuestion();
+    }
+  }, 900);
+}
+
+// 顯示階段暫停 modal
+function showStagePause() {
+  // Stage 2 的計時器暫停
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+
+  const done = currentIdx;
+  const remain = quizData.length - currentIdx;
+  const correct = wrongAnswers.filter(w => w.isCorrect).length;
+
+  document.getElementById("pause-done-count").innerText = done;
+  document.getElementById("pause-done-total").innerText = done;
+  document.getElementById("pause-correct-count").innerText = correct;
+  document.getElementById("pause-remain-count").innerText = remain;
+  document.getElementById("stage-pause-modal").classList.remove("hidden");
+}
+
+// 繼續測驗（關閉 modal 並載入下一題）
+function continueQuiz() {
+  document.getElementById("stage-pause-modal").classList.add("hidden");
+  loadQuestion();
+}
+
+// 提早結束測驗（截斷後面沒做的題目，直接結算）
+function stopQuizEarly() {
+  document.getElementById("stage-pause-modal").classList.add("hidden");
+
+  // 重新計算分數：以「已作答題數」為分母，避免因未做完而分數偏低
+  const doneCount = currentIdx;
+  if (doneCount > 0) {
+    const correctCount = wrongAnswers.filter(w => w.isCorrect).length;
+    score = (correctCount / doneCount) * 100;
+  }
+
+  // 把 quizData 截斷到目前已做的長度（讓 endQuiz 相關統計正確）
+  quizData = quizData.slice(0, currentIdx);
+  endQuiz();
 }
 
 function endQuiz() {
